@@ -7,7 +7,7 @@ void* createNewBufferWithBytes(void *deviceID, float *bytes, size_t length) {
         length:length * sizeof(float)
         options: MTLResourceCPUCacheModeDefaultCache
     ];
-     return (__bridge void*)buffer;
+    return (__bridge void*)buffer;
 }
 
 void* createNewBufferWithLength(void *deviceID, size_t length) {
@@ -16,7 +16,7 @@ void* createNewBufferWithLength(void *deviceID, size_t length) {
         newBufferWithLength:length * sizeof(float)
         options: MTLResourceCPUCacheModeDefaultCache
     ];
-     return (__bridge void*)buffer;
+    return (__bridge void*)buffer;
 }
 
 void releaseBuffer(void *bufferID) {
