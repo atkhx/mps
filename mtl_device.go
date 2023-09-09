@@ -31,11 +31,17 @@ type Releasable interface {
 }
 
 func NewMTLDevice() *MTLDevice {
-	return &MTLDevice{deviceID: unsafe.Pointer(C.createDevice())}
+	device := &MTLDevice{
+		deviceID: unsafe.Pointer(C.createDevice()),
+	}
+
+	device.kernels = device.CreateCustomKernels()
+	return device
 }
 
 type MTLDevice struct {
 	deviceID  unsafe.Pointer
+	kernels   *MTLCustomKernels
 	resources []Releasable
 }
 

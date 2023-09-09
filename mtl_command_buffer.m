@@ -1,9 +1,4 @@
 #include "mtl_command_buffer.h"
-#import "krn_mtl_buffer_fill.h"
-#import "krn_mtl_buffer_relu_fwd.h"
-#import "krn_mtl_buffer_relu_bwd.h"
-#import "krn_mtl_buffer_mul.h"
-#import "krn_mtl_buffer_dropout.h"
 
 void* createCommandBuffer(void *commandQueueID) {
     id<MTLCommandQueue> commandQueue = (id<MTLCommandQueue>)commandQueueID;
@@ -22,117 +17,160 @@ void commitAndWaitUntilCompletedCommandBuffer(void *commandBufferID) {
     [commandBuffer waitUntilCompleted];
 }
 
+
 void fillMTLBuffer(
-    const char *kernelSource,
-    void *deviceID,
+    void *kernelID,
     void *commandBufferID,
     void *bufferID,
     float value
 ) {
-    id<MTLDevice> device = (id<MTLDevice>)deviceID;
-    id<MTLBuffer> buffer = (id<MTLBuffer>)bufferID;
-    id<MTLCommandBuffer> commandBuffer = (id<MTLCommandBuffer>)commandBufferID;
-
-    NSString *kernelSourceString = [NSString stringWithUTF8String:kernelSource];
-
-    KernelMTLBufferFillImpl *kernel = [[KernelMTLBufferFillImpl alloc] initWithDevice:device kernelSource:kernelSourceString];
-    [kernel fill:buffer withValue:value commandBuffer:commandBuffer];
+    KernelMTLBufferFillImpl *kernel = (__bridge KernelMTLBufferFillImpl*)kernelID;
+    [kernel fill:(id<MTLBuffer>)bufferID withValue:value
+        commandBuffer:(id<MTLCommandBuffer>)commandBufferID];
 }
 
 void fillPartMTLBuffer(
-    const char *kernelSource,
-    void *deviceID,
+    void *kernelID,
     void *commandBufferID,
     void *bufferID,
     const uint offset,
     const uint length,
     float value
 ) {
-    id<MTLDevice> device = (id<MTLDevice>)deviceID;
-    id<MTLBuffer> buffer = (id<MTLBuffer>)bufferID;
-    id<MTLCommandBuffer> commandBuffer = (id<MTLCommandBuffer>)commandBufferID;
-
-    NSString *kernelSourceString = [NSString stringWithUTF8String:kernelSource];
-
-    KernelMTLBufferFillImpl *kernel = [[KernelMTLBufferFillImpl alloc] initWithDevice:device kernelSource:kernelSourceString];
-    [kernel fillPart:buffer withValue:value commandBuffer:commandBuffer offset:offset length:length];
+    KernelMTLBufferFillImpl *kernel = (__bridge KernelMTLBufferFillImpl*)kernelID;
+    [kernel fillPart:(id<MTLBuffer>)bufferID withValue:value
+        commandBuffer:(id<MTLCommandBuffer>)commandBufferID offset:offset length:length];
 }
 
 void reluMTLBuffer(
-    void *deviceID,
+    void *kernelID,
     void *commandBufferID,
     void *destinationBufferID,
-    void *sourceBufferID,
-    const char *kernelSource
+    void *sourceBufferID
 ) {
-    id<MTLDevice> device = (id<MTLDevice>)deviceID;
-    id<MTLBuffer> destinationBuffer = (id<MTLBuffer>)destinationBufferID;
-    id<MTLBuffer> sourceBuffer = (id<MTLBuffer>)sourceBufferID;
-    id<MTLCommandBuffer> commandBuffer = (id<MTLCommandBuffer>)commandBufferID;
-
-    NSString *kernelSourceString = [NSString stringWithUTF8String:kernelSource];
-
-    KernelMTLBufferReluFwdImpl *kernel = [[KernelMTLBufferReluFwdImpl alloc] initWithDevice:device kernelSource:kernelSourceString];
-    [kernel reluFwd:destinationBuffer sourceBuffer:sourceBuffer withCommandBuffer:commandBuffer];
+    KernelMTLBufferReluFwdImpl *kernel = (__bridge KernelMTLBufferReluFwdImpl*)kernelID;
+    [kernel reluFwd:(id<MTLBuffer>)destinationBufferID
+        sourceBuffer:(id<MTLBuffer>)sourceBufferID
+        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
 }
 
 void reluMTLBufferBwd(
-    void *deviceID,
+    void *kernelID,
     void *commandBufferID,
     void *destinationBufferID,
     void *sourceBufferID,
-    void *maskBufferID,
-    const char *kernelSource
+    void *maskBufferID
 ) {
-    id<MTLDevice> device = (id<MTLDevice>)deviceID;
-    id<MTLBuffer> destinationBuffer = (id<MTLBuffer>)destinationBufferID;
-    id<MTLBuffer> sourceBuffer = (id<MTLBuffer>)sourceBufferID;
-    id<MTLBuffer> maskBuffer = (id<MTLBuffer>)maskBufferID;
-    id<MTLCommandBuffer> commandBuffer = (id<MTLCommandBuffer>)commandBufferID;
+    KernelMTLBufferReluBwdImpl *kernel = (__bridge KernelMTLBufferReluBwdImpl*)kernelID;
 
-    NSString *kernelSourceString = [NSString stringWithUTF8String:kernelSource];
-
-    KernelMTLBufferReluBwdImpl *kernel = [[KernelMTLBufferReluBwdImpl alloc] initWithDevice:device kernelSource:kernelSourceString];
-    [kernel reluBwd:destinationBuffer sourceBuffer:sourceBuffer maskBuffer:maskBuffer withCommandBuffer:commandBuffer];
+    [kernel reluBwd:(id<MTLBuffer>)destinationBufferID
+        sourceBuffer:(id<MTLBuffer>)sourceBufferID
+        maskBuffer:(id<MTLBuffer>)maskBufferID
+        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
 }
 
 
 void mulBuffer(
-    void *deviceID,
+    void *kernelID,
     void *commandBufferID,
     void *destinationBufferID,
-    void *multiplierBufferID,
-    const char *kernelSource
+    void *multiplierBufferID
 ) {
-    id<MTLDevice> device = (id<MTLDevice>)deviceID;
-    id<MTLBuffer> destinationBuffer = (id<MTLBuffer>)destinationBufferID;
-    id<MTLBuffer> multiplierBuffer = (id<MTLBuffer>)multiplierBufferID;
-    id<MTLCommandBuffer> commandBuffer = (id<MTLCommandBuffer>)commandBufferID;
-
-    NSString *kernelSourceString = [NSString stringWithUTF8String:kernelSource];
-
-    KernelMTLBufferMulImpl *kernel = [[KernelMTLBufferMulImpl alloc] initWithDevice:device kernelSource:kernelSourceString];
-    [kernel mul:destinationBuffer multiplierBuffer:multiplierBuffer withCommandBuffer:commandBuffer];
+    KernelMTLBufferMulImpl *kernel = (__bridge KernelMTLBufferMulImpl*)kernelID;
+    [kernel mul:(id<MTLBuffer>)destinationBufferID
+        multiplierBuffer:(id<MTLBuffer>)multiplierBufferID
+        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
 }
 
-
 void dropoutBuffer(
-    void *deviceID,
+    void *kernelID,
     void *commandBufferID,
     void *destinationBufferID,
     void *sourceBufferID,
     void *maskOutBufferID,
-    float probability,
-    const char *kernelSource
+    float probability
 ) {
-    KernelMTLBufferDropoutImpl *kernel = [[KernelMTLBufferDropoutImpl alloc]
-        initWithDevice:(id<MTLDevice>)deviceID
-        kernelSource:[NSString stringWithUTF8String:kernelSource]];
-
+    KernelMTLBufferDropoutImpl *kernel = (__bridge KernelMTLBufferDropoutImpl*)kernelID;
     [kernel
         dropout:(id<MTLBuffer>)destinationBufferID
         sourceBuffer:(id<MTLBuffer>)sourceBufferID
         maskOutBuffer:(id<MTLBuffer>)maskOutBufferID
         probability:probability
+        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
+}
+
+void softmaxBuffer(
+    void *deviceID,
+    void *commandBufferID,
+    void *destinationBufferID,
+    void *sourceBufferID,
+    void *sumOutBufferID,
+    uint colsCount,
+    uint rowsCount,
+    uint offset,
+    const char *kernelSource
+) {
+    KernelMTLBufferSoftmaxImpl *kernel = [[KernelMTLBufferSoftmaxImpl alloc]
+        initWithDevice:(id<MTLDevice>)deviceID
+        kernelSource:[NSString stringWithUTF8String:kernelSource]];
+
+    [kernel
+        softmax:(id<MTLBuffer>)destinationBufferID
+        sourceBuffer:(id<MTLBuffer>)sourceBufferID
+        sumOutBuffer:(id<MTLBuffer>)sumOutBufferID
+        colsCount:colsCount
+        rowsCount:rowsCount
+        offset:offset
+        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
+}
+
+
+void softmaxBufferTril(
+    void *kernelID,
+    void *commandBufferID,
+    void *destinationBufferID,
+    void *sourceBufferID,
+//     void *maxOutBufferID,
+//     void *sumOutBufferID,
+    uint colsCount,
+    uint rowsCount,
+    uint offset
+) {
+    KernelMTLBufferSoftmaxTrilImpl *kernel = (__bridge KernelMTLBufferSoftmaxTrilImpl*)kernelID;
+
+    [kernel
+        softmaxTril:(id<MTLBuffer>)destinationBufferID
+        sourceBuffer:(id<MTLBuffer>)sourceBufferID
+//         maxOutBuffer:(id<MTLBuffer>)maxOutBufferID
+//         sumOutBuffer:(id<MTLBuffer>)sumOutBufferID
+        colsCount:colsCount
+        rowsCount:rowsCount
+        offset:offset
+        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
+}
+
+void softmaxBufferTrilBwd(
+    void *kernelID,
+    void *commandBufferID,
+    void *destinationBufferID,
+    void *sourceBufferID,
+    void *softmaxBufferID,
+//     void *softmaxGradBufferID,
+//     void *sumOutBufferID,
+    uint colsCount,
+    uint rowsCount,
+    uint offset
+) {
+    KernelMTLBufferSoftmaxTrilBwdImpl *kernel = (__bridge KernelMTLBufferSoftmaxTrilBwdImpl*)kernelID;
+
+    [kernel
+        softmaxTrilBwd:(id<MTLBuffer>)destinationBufferID
+        sourceBuffer:(id<MTLBuffer>)sourceBufferID
+        softmaxBuffer:(id<MTLBuffer>)softmaxBufferID
+//         softmaxGradBuffer:(id<MTLBuffer>)softmaxGradBufferID
+//         sumOutBuffer:(id<MTLBuffer>)sumOutBufferID
+        colsCount:colsCount
+        rowsCount:rowsCount
+        offset:offset
         withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
 }

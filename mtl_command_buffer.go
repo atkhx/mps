@@ -22,21 +22,6 @@ func CommandBufferFromContext(ctx context.Context) *MTLCommandBuffer {
 	return ctx.Value("MTLCommandBuffer").(*MTLCommandBuffer)
 }
 
-//go:embed kernel/krn_mtl_buffer_relu_fwd.metal
-var kernelReLU string
-
-//go:embed kernel/krn_mtl_buffer_relu_bwd.metal
-var kernelReLUBwd string
-
-//go:embed kernel/krn_mtl_buffer_fill.metal
-var kernelFill string
-
-//go:embed kernel/krn_mtl_buffer_mul.metal
-var kernelMul string
-
-//go:embed kernel/krn_mtl_buffer_dropout.metal
-var kernelDropout string
-
 func (queue *MTLCommandQueue) CreateCommandBuffer() *MTLCommandBuffer {
 	switch {
 	case queue.buffer != nil && !queue.buffer.completed:
@@ -48,6 +33,7 @@ func (queue *MTLCommandQueue) CreateCommandBuffer() *MTLCommandBuffer {
 	buffer := &MTLCommandBuffer{
 		id:       C.createCommandBuffer(queue.queueID),
 		deviceID: queue.deviceID,
+		device:   queue.device,
 	}
 
 	queue.buffer = buffer
@@ -55,12 +41,15 @@ func (queue *MTLCommandQueue) CreateCommandBuffer() *MTLCommandBuffer {
 }
 
 type MTLCommandBuffer struct {
-	id          unsafe.Pointer
-	deviceID    unsafe.Pointer
+	id       unsafe.Pointer
+	deviceID unsafe.Pointer
+	device   *MTLDevice
+
 	uncommitted int64
 	completed   bool
 	released    bool
-	mu          sync.Mutex
+
+	mu sync.Mutex
 }
 
 func (b *MTLCommandBuffer) Release() {
@@ -71,83 +60,134 @@ func (b *MTLCommandBuffer) Release() {
 	}
 }
 
-func (b *MTLCommandBuffer) ReLuMTLBuffer(destinationBuffer, sourceBuffer *MTLBuffer) {
-	cKernelReLU := C.CString(kernelReLU)
-	defer C.free(unsafe.Pointer(cKernelReLU))
-
-	b.mu.Lock()
-	C.reluMTLBuffer(b.deviceID, b.id, destinationBuffer.bufferID, sourceBuffer.bufferID, cKernelReLU)
-	b.uncommitted++
-	b.mu.Unlock()
-}
-
-func (b *MTLCommandBuffer) ReLuMTLBufferBwd(destinationBuffer, sourceBuffer, maskBuffer *MTLBuffer) {
-	cKernelReLUBwd := C.CString(kernelReLUBwd)
-	defer C.free(unsafe.Pointer(cKernelReLUBwd))
-
-	b.mu.Lock()
-	C.reluMTLBufferBwd(b.deviceID, b.id, destinationBuffer.bufferID, sourceBuffer.bufferID, maskBuffer.bufferID, cKernelReLUBwd)
-	b.uncommitted++
-	b.mu.Unlock()
-}
-
 func (b *MTLCommandBuffer) ClearMTLBuffer(buffer *MTLBuffer) {
-	cKernelFill := C.CString(kernelFill)
-	defer C.free(unsafe.Pointer(cKernelFill))
-
 	b.mu.Lock()
-	C.fillMTLBuffer(cKernelFill, b.deviceID, b.id, buffer.bufferID, 0.0)
+	C.fillMTLBuffer(b.device.kernels.GetKernelID("fill"), b.id, buffer.bufferID, 0.0)
 	b.uncommitted++
 	b.mu.Unlock()
 }
 
 func (b *MTLCommandBuffer) FillMTLBuffer(buffer *MTLBuffer, value float32) {
-	cKernelFill := C.CString(kernelFill)
-	defer C.free(unsafe.Pointer(cKernelFill))
-
 	b.mu.Lock()
-	C.fillMTLBuffer(cKernelFill, b.deviceID, b.id, buffer.bufferID, C.float(value))
+	C.fillMTLBuffer(b.device.kernels.GetKernelID("fill"), b.id, buffer.bufferID, C.float(value))
 	b.uncommitted++
 	b.mu.Unlock()
 }
 
 func (b *MTLCommandBuffer) FillMTLBufferPart(buffer *MTLBuffer, value float32, offset, length int) {
-	cKernelFill := C.CString(kernelFill)
-	defer C.free(unsafe.Pointer(cKernelFill))
-
 	b.mu.Lock()
-	C.fillPartMTLBuffer(cKernelFill, b.deviceID, b.id, buffer.bufferID, C.uint(offset*4), C.uint(length*4), C.float(value))
+	C.fillPartMTLBuffer(b.device.kernels.GetKernelID("fill"), b.id, buffer.bufferID, C.uint(offset*4), C.uint(length*4), C.float(value))
+	b.uncommitted++
+	b.mu.Unlock()
+}
+
+func (b *MTLCommandBuffer) ReLuMTLBuffer(destinationBuffer, sourceBuffer *MTLBuffer) {
+	b.mu.Lock()
+	C.reluMTLBuffer(b.device.kernels.GetKernelID("relu_fwd"), b.id, destinationBuffer.bufferID, sourceBuffer.bufferID)
+	b.uncommitted++
+	b.mu.Unlock()
+}
+
+func (b *MTLCommandBuffer) ReLuMTLBufferBwd(destinationBuffer, sourceBuffer, maskBuffer *MTLBuffer) {
+	b.mu.Lock()
+	C.reluMTLBufferBwd(b.device.kernels.GetKernelID("relu_bwd"), b.id, destinationBuffer.bufferID, sourceBuffer.bufferID, maskBuffer.bufferID)
 	b.uncommitted++
 	b.mu.Unlock()
 }
 
 func (b *MTLCommandBuffer) MulBuffer(destinationBuffer, multiplierBuffer *MTLBuffer) {
-	cKernelString := C.CString(kernelMul)
-	defer C.free(unsafe.Pointer(cKernelString))
-
 	b.mu.Lock()
-	C.mulBuffer(b.deviceID, b.id, destinationBuffer.bufferID, multiplierBuffer.bufferID, cKernelString)
+	C.mulBuffer(b.device.kernels.GetKernelID("mul"), b.id, destinationBuffer.bufferID, multiplierBuffer.bufferID)
 	b.uncommitted++
 	b.mu.Unlock()
 }
 
 func (b *MTLCommandBuffer) DropoutBuffer(
 	destinationBuffer,
-	sourceBufferBuffer,
+	sourceBuffer,
 	maskOutBuffer *MTLBuffer,
 	probability float32,
 ) {
-	cKernelString := C.CString(kernelDropout)
+	b.mu.Lock()
+	C.dropoutBuffer(
+		b.device.kernels.GetKernelID("dropout"),
+		b.id,
+		destinationBuffer.bufferID,
+		sourceBuffer.bufferID,
+		maskOutBuffer.bufferID,
+		C.float(probability),
+	)
+	b.uncommitted++
+	b.mu.Unlock()
+}
+
+func (b *MTLCommandBuffer) SoftmaxBuffer(
+	destinationBuffer *MTLBuffer,
+	sourceBuffer *MTLBuffer,
+	sumOutBuffer *MTLBuffer,
+	colsCount, rowsCount, offset int,
+) {
+	cKernelString := C.CString(kernelSoftmax)
 	defer C.free(unsafe.Pointer(cKernelString))
 
 	b.mu.Lock()
-	C.dropoutBuffer(
+	C.softmaxBuffer(
 		b.deviceID, b.id,
 		destinationBuffer.bufferID,
-		sourceBufferBuffer.bufferID,
-		maskOutBuffer.bufferID,
-		C.float(probability),
+		sourceBuffer.bufferID,
+		sumOutBuffer.bufferID,
+		C.uint(colsCount),
+		C.uint(rowsCount),
+		C.uint(offset*4),
 		cKernelString,
+	)
+	b.uncommitted++
+	b.mu.Unlock()
+}
+
+func (b *MTLCommandBuffer) SoftmaxBufferTril(
+	destinationBuffer *MTLBuffer,
+	sourceBuffer *MTLBuffer,
+	//maxOutBuffer *MTLBuffer,
+	//sumOutBuffer *MTLBuffer,
+	colsCount, rowsCount, offset int,
+) {
+	b.mu.Lock()
+	C.softmaxBufferTril(
+		b.device.kernels.GetKernelID("softmax_tril"),
+		b.id,
+		destinationBuffer.bufferID,
+		sourceBuffer.bufferID,
+		//maxOutBuffer.bufferID,
+		//sumOutBuffer.bufferID,
+		C.uint(colsCount),
+		C.uint(rowsCount),
+		C.uint(offset*4),
+	)
+	b.uncommitted++
+	b.mu.Unlock()
+}
+
+func (b *MTLCommandBuffer) SoftmaxBufferTrilBwd(
+	destinationBuffer *MTLBuffer,
+	sourceBuffer *MTLBuffer,
+	softmaxBuffer *MTLBuffer,
+	//softmaxGradBuffer *MTLBuffer,
+	//sumOutBuffer *MTLBuffer,
+	colsCount, rowsCount, offset int,
+) {
+	b.mu.Lock()
+	C.softmaxBufferTrilBwd(
+		b.device.kernels.GetKernelID("softmax_tril_bwd"),
+		b.id,
+		destinationBuffer.bufferID,
+		sourceBuffer.bufferID,
+		softmaxBuffer.bufferID,
+		//softmaxGradBuffer.bufferID,
+		//sumOutBuffer.bufferID,
+		C.uint(colsCount),
+		C.uint(rowsCount),
+		C.uint(offset*4),
 	)
 	b.uncommitted++
 	b.mu.Unlock()

@@ -21,8 +21,6 @@ type Matrix struct {
 }
 
 func (buffer *MTLBuffer) CreateMatrix(cols, rows, offset int) *Matrix {
-	// todo validate offset + cols * rows with buffer length
-
 	descID := C.createMPSMatrixDescriptor(C.int(cols), C.int(rows))
 
 	matrix := &Matrix{

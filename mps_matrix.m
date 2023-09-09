@@ -1,4 +1,3 @@
-// cgo_matrix.m
 #include "mps_matrix.h"
 
 void* createMPSMatrixDescriptor(int cols, int rows) {
@@ -21,13 +20,10 @@ void* createMPSMatrix(
     void *descriptorID,
     int offset
 ) {
-    id<MTLBuffer> buffer = (id<MTLBuffer>)bufferID;
-    MPSMatrixDescriptor *descriptor = (__bridge MPSMatrixDescriptor*)descriptorID;
-
     MPSMatrix *matrixA = [[MPSMatrix alloc]
-        initWithBuffer:buffer
+        initWithBuffer:(id<MTLBuffer>)bufferID
         offset:offset*sizeof(float)
-        descriptor:descriptor];
+        descriptor:(__bridge MPSMatrixDescriptor*)descriptorID];
 
     return (__bridge void*)matrixA;
 }

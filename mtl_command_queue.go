@@ -15,6 +15,7 @@ func (device *MTLDevice) CreateCommandQueue() *MTLCommandQueue {
 	queue := &MTLCommandQueue{
 		queueID:  C.createCommandQueue(device.deviceID),
 		deviceID: device.deviceID,
+		device:   device,
 	}
 	device.regSource(queue)
 	return queue
@@ -23,6 +24,7 @@ func (device *MTLDevice) CreateCommandQueue() *MTLCommandQueue {
 type MTLCommandQueue struct {
 	queueID  unsafe.Pointer
 	deviceID unsafe.Pointer
+	device   *MTLDevice
 	released bool
 	buffer   *MTLCommandBuffer
 }

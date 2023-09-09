@@ -203,3 +203,159 @@ func TestMTLCommandBuffer_DropoutBuffer(t *testing.T) {
 		}
 	}
 }
+
+func TestMTLCommandBuffer_SoftmaxBuffer(t *testing.T) {
+	device := NewMTLDevice()
+	defer device.Release()
+
+	commandQueue := device.CreateCommandQueue()
+	defer commandQueue.Release()
+
+	commandBuffer := commandQueue.CreateCommandBuffer()
+	defer commandBuffer.Release()
+
+	colsCount := 3
+	rowsCount := 3
+
+	offset := 3
+	offsetEnd := 3
+
+	totalLength := offset + (colsCount * rowsCount) + offsetEnd
+
+	destinationBuffer := device.CreateNewBufferWithLength(totalLength)
+	defer destinationBuffer.Release()
+
+	sourceBuffer := device.CreateNewBufferWithLength(totalLength)
+	defer sourceBuffer.Release()
+
+	sumOutBuffer := device.CreateNewBufferWithLength(rowsCount)
+	defer sumOutBuffer.Release()
+
+	for i := offset; i < len(destinationBuffer.GetData())-offsetEnd; i++ {
+		sourceBuffer.GetData()[i] = rand.Float32()
+	}
+
+	commandBuffer.SoftmaxBuffer(destinationBuffer, sourceBuffer, sumOutBuffer, colsCount, rowsCount, offset)
+	commandBuffer.Wait()
+
+	fmt.Println(sourceBuffer.GetData())
+	fmt.Println(sumOutBuffer.GetData())
+	fmt.Println(destinationBuffer.GetData())
+}
+
+func TestMTLCommandBuffer_SoftmaxBufferTril(t *testing.T) {
+	device := NewMTLDevice()
+	defer device.Release()
+
+	commandQueue := device.CreateCommandQueue()
+	defer commandQueue.Release()
+
+	commandBuffer := commandQueue.CreateCommandBuffer()
+	defer commandBuffer.Release()
+
+	colsCount := 3
+	rowsCount := 2
+
+	offset := 0
+	offsetEnd := 0
+
+	totalLength := offset + (colsCount * rowsCount) + offsetEnd
+
+	destinationBuffer := device.CreateNewBufferWithLength(totalLength)
+	defer destinationBuffer.Release()
+
+	sourceBuffer := device.CreateNewBufferWithLength(totalLength)
+	defer sourceBuffer.Release()
+
+	//maxOutBuffer := device.CreateNewBufferWithLength(rowsCount)
+	//defer maxOutBuffer.Release()
+
+	//sumOutBuffer := device.CreateNewBufferWithLength(rowsCount)
+	//defer sumOutBuffer.Release()
+
+	for i := offset; i < len(destinationBuffer.GetData())-offsetEnd; i++ {
+		sourceBuffer.GetData()[i] = rand.Float32()
+	}
+
+	//for y := 0; y < rowsCount; y++ {
+	//	for x := 0; x < y+1; x++ {
+	//		sourceBuffer.GetData()[y*colsCount+x] = rand.Float32()
+	//	}
+	//}
+
+	commandBuffer.SoftmaxBufferTril(
+		destinationBuffer,
+		sourceBuffer,
+		//maxOutBuffer,
+		//sumOutBuffer,
+		colsCount,
+		rowsCount,
+		offset,
+	)
+	commandBuffer.Wait()
+
+	fmt.Println("src", sourceBuffer.GetData())
+	//fmt.Println("max", maxOutBuffer.GetData())
+	//fmt.Println("sum", sumOutBuffer.GetData())
+	fmt.Println("dst", destinationBuffer.GetData())
+}
+
+func TestMTLCommandBuffer_SoftmaxBufferTrilBwd(t *testing.T) {
+	device := NewMTLDevice()
+	defer device.Release()
+
+	commandQueue := device.CreateCommandQueue()
+	defer commandQueue.Release()
+
+	commandBuffer := commandQueue.CreateCommandBuffer()
+	defer commandBuffer.Release()
+
+	colsCount := 3
+	rowsCount := 2
+
+	offset := 0
+	offsetEnd := 0
+
+	totalLength := offset + (colsCount * rowsCount) + offsetEnd
+
+	destinationBuffer := device.CreateNewBufferWithLength(totalLength)
+	defer destinationBuffer.Release()
+
+	sourceBuffer := device.CreateNewBufferWithLength(totalLength)
+	defer sourceBuffer.Release()
+
+	softmaxBuffer := device.CreateNewBufferWithLength(totalLength)
+	defer softmaxBuffer.Release()
+
+	//softmaxGradBuffer := device.CreateNewBufferWithLength(totalLength)
+	//defer softmaxGradBuffer.Release()
+
+	//sumOutBuffer := device.CreateNewBufferWithLength(rowsCount)
+	//defer sumOutBuffer.Release()
+
+	rand.Seed(123)
+
+	for i := offset; i < len(destinationBuffer.GetData())-offsetEnd; i++ {
+		sourceBuffer.GetData()[i] = rand.Float32()
+		softmaxBuffer.GetData()[i] = rand.Float32()
+		//destinationBuffer.GetData()[i] = 1
+	}
+
+	commandBuffer.SoftmaxBufferTrilBwd(
+		destinationBuffer,
+		sourceBuffer,
+		softmaxBuffer,
+		//softmaxGradBuffer,
+		//sumOutBuffer,
+		colsCount,
+		rowsCount,
+		offset,
+	)
+	commandBuffer.Wait()
+
+	fmt.Println("src", sourceBuffer.GetData())
+	fmt.Println("sfm", softmaxBuffer.GetData())
+	//fmt.Println("smg", softmaxGradBuffer.GetData())
+	//fmt.Println("sum", sumOutBuffer.GetData())
+	fmt.Println("dst", destinationBuffer.GetData())
+}
