@@ -1,17 +1,11 @@
 package mps
 
-/*
-#cgo CFLAGS: -x objective-c
-#cgo LDFLAGS: -framework Metal -framework MetalPerformanceShaders -framework CoreGraphics
-#include "mps_matrix.h"
-*/
-import "C"
 import "unsafe"
 
 type Matrix struct {
-	matrixID unsafe.Pointer
-	descID   unsafe.Pointer
-	buffer   *MTLBuffer
+	matrixID     unsafe.Pointer
+	descriptorID unsafe.Pointer
+	mtlBuffer    *MTLBuffer
 
 	offset int
 	length int
@@ -21,27 +15,27 @@ type Matrix struct {
 }
 
 func (buffer *MTLBuffer) CreateMatrix(cols, rows, offset int) *Matrix {
-	descID := C.createMPSMatrixDescriptor(C.int(cols), C.int(rows))
+	descriptorID := mpsMatrixDescriptorCreate(cols, rows)
+	matrixID := mpsMatrixCreate(buffer.bufferID, descriptorID, offset)
 
-	matrix := &Matrix{
-		matrixID: C.createMPSMatrix(buffer.bufferID, descID, C.int(offset)),
-		descID:   descID,
-		buffer:   buffer,
-		offset:   offset,
-		length:   cols * rows,
+	return &Matrix{
+		matrixID:     matrixID,
+		descriptorID: descriptorID,
+		mtlBuffer:    buffer,
+
+		offset: offset,
+		length: cols * rows,
 
 		cols: cols,
 		rows: rows,
 	}
-
-	return matrix
 }
 
 func (m *Matrix) GetData() []float32 {
-	return m.buffer.GetData()[m.offset : m.offset+m.length]
+	return m.mtlBuffer.GetData()[m.offset : m.offset+m.length]
 }
 
 func (m *Matrix) Release() {
-	C.releaseMPSMatrixDescriptor(m.descID)
-	C.releaseMPSMatrix(m.matrixID)
+	mpsMatrixDescriptorRelease(m.descriptorID)
+	mpsMatrixRelease(m.matrixID)
 }

@@ -29,7 +29,7 @@ var (
 )
 
 func TestMTLCommandBuffer_MatrixMultiply_OneOperationOnOneBuffer(t *testing.T) {
-	// Simple check ability to perform matrix multiplication using common buffer for each matrix.
+	// Simple check ability to perform matrix multiplication using common mtlBuffer for each matrix.
 
 	// C = A @ B
 

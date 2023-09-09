@@ -144,7 +144,7 @@ func TestMTLCommandBuffer_Sequence(t *testing.T) {
 	require.Equal(t, []float32{1, 1, 2, 2, 3, 3, 3, 3, 3}, destinationBuffer.GetData())
 }
 
-func TestMTLCommandBuffer_MulBuffer(t *testing.T) {
+func TestMTLCommandBuffer_Mul(t *testing.T) {
 	device := NewMTLDevice()
 	defer device.Release()
 
@@ -154,16 +154,16 @@ func TestMTLCommandBuffer_MulBuffer(t *testing.T) {
 	commandBuffer := commandQueue.CreateCommandBuffer()
 	defer commandBuffer.Release()
 
-	destinationBuffer := device.CreateBufferWithBytes([]float32{1, 2, 3, 4, 5})
-	defer destinationBuffer.Release()
+	destination := device.CreateBufferWithBytes([]float32{1, 2, 3, 4, 5})
+	defer destination.Release()
 
-	multiplierBuffer := device.CreateBufferWithBytes([]float32{5, 4, 3, 2, 1})
-	defer multiplierBuffer.Release()
+	multiplier := device.CreateBufferWithBytes([]float32{5, 4, 3, 2, 1})
+	defer multiplier.Release()
 
-	commandBuffer.MulBuffer(destinationBuffer, multiplierBuffer)
+	commandBuffer.Mul(destination, multiplier)
 	commandBuffer.Wait()
 
-	require.Equal(t, []float32{5, 8, 9, 8, 5}, destinationBuffer.GetData())
+	require.Equal(t, []float32{5, 8, 9, 8, 5}, destination.GetData())
 }
 
 func TestMTLCommandBuffer_DropoutBuffer(t *testing.T) {

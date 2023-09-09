@@ -1,11 +1,5 @@
 package mps
 
-/*
-#cgo CFLAGS: -x objective-c
-#cgo LDFLAGS: -framework Metal -framework MetalPerformanceShaders -framework CoreGraphics
-#include "mtl_device.h"
-*/
-import "C"
 import (
 	"unsafe"
 )
@@ -13,14 +7,12 @@ import (
 var DefaultDevice *MTLDevice
 
 func InitDefaultDevice() {
-	// todo Once
 	if DefaultDevice == nil {
 		DefaultDevice = NewMTLDevice()
 	}
 }
 
 func ReleaseDefaultDevice() {
-	// todo Once
 	if DefaultDevice != nil {
 		DefaultDevice.Release()
 	}
@@ -31,18 +23,35 @@ type Releasable interface {
 }
 
 func NewMTLDevice() *MTLDevice {
+	deviceID := mtlDeviceCreate()
 	device := &MTLDevice{
-		deviceID: unsafe.Pointer(C.createDevice()),
+		deviceID: deviceID,
+
+		krnFill:           customKernelFillCreate(deviceID),
+		krnReLUFwd:        customKernelReLUForwardCreate(deviceID),
+		krnReLUBwd:        customKernelReLUBackwardCreate(deviceID),
+		krnMul:            customKernelMulCreate(deviceID),
+		krnDropout:        customKernelDropoutCreate(deviceID),
+		krnSoftmax:        customKernelSoftmaxForwardCreate(deviceID),
+		krnSoftmaxTrilFwd: customKernelSoftmaxTrilForwardCreate(deviceID),
+		krnSoftmaxTrilBwd: customKernelSoftmaxTrilBackwardCreate(deviceID),
 	}
 
-	device.kernels = device.CreateCustomKernels()
 	return device
 }
 
 type MTLDevice struct {
 	deviceID  unsafe.Pointer
-	kernels   *MTLCustomKernels
 	resources []Releasable
+
+	krnFill           unsafe.Pointer
+	krnReLUFwd        unsafe.Pointer
+	krnReLUBwd        unsafe.Pointer
+	krnMul            unsafe.Pointer
+	krnDropout        unsafe.Pointer
+	krnSoftmax        unsafe.Pointer
+	krnSoftmaxTrilFwd unsafe.Pointer
+	krnSoftmaxTrilBwd unsafe.Pointer
 }
 
 func (device *MTLDevice) regSource(source Releasable) {
@@ -54,5 +63,5 @@ func (device *MTLDevice) Release() {
 		device.resources[i-1].Release()
 	}
 	device.resources = nil
-	C.releaseDevice(device.deviceID)
+	mtlDeviceRelease(device.deviceID)
 }

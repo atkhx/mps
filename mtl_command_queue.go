@@ -1,21 +1,12 @@
 package mps
 
-/*
-#cgo CFLAGS: -x objective-c
-#cgo LDFLAGS: -framework Metal -framework MetalPerformanceShaders -framework CoreGraphics
-#include "mtl_command_queue.h"
-#include "mps_matrix_multiply.h"
-*/
 import "C"
-import (
-	"unsafe"
-)
+import "unsafe"
 
 func (device *MTLDevice) CreateCommandQueue() *MTLCommandQueue {
 	queue := &MTLCommandQueue{
-		queueID:  C.createCommandQueue(device.deviceID),
-		deviceID: device.deviceID,
-		device:   device,
+		queueID: mtlCommandQueueCreate(device.deviceID),
+		device:  device,
 	}
 	device.regSource(queue)
 	return queue
@@ -23,7 +14,6 @@ func (device *MTLDevice) CreateCommandQueue() *MTLCommandQueue {
 
 type MTLCommandQueue struct {
 	queueID  unsafe.Pointer
-	deviceID unsafe.Pointer
 	device   *MTLDevice
 	released bool
 	buffer   *MTLCommandBuffer
@@ -36,7 +26,7 @@ func (d *MTLCommandQueue) GetID() unsafe.Pointer {
 func (b *MTLCommandQueue) Release() {
 	if !b.released {
 		b.buffer.Release()
-		C.releaseCommandQueue(b.queueID)
+		mtlCommandQueueRelease(b.queueID)
 		b.released = true
 	}
 }

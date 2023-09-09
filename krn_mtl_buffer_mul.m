@@ -14,7 +14,6 @@
     if (self) {
         _device = device;
 
-
         self.library = [_device newLibraryWithSource:kernelSource options:nil error:&error];
         _kernelFunction = [self.library newFunctionWithName:@"mul"];
         if (!_kernelFunction) {

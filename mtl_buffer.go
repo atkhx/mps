@@ -1,14 +1,6 @@
 package mps
 
-/*
-#cgo CFLAGS: -x objective-c
-#cgo LDFLAGS: -framework Metal -framework MetalPerformanceShaders -framework CoreGraphics
-#include "mtl_buffer.h"
-*/
-import "C"
-import (
-	"unsafe"
-)
+import "unsafe"
 
 type MTLBuffer struct {
 	bufferID unsafe.Pointer
@@ -19,8 +11,8 @@ type MTLBuffer struct {
 }
 
 func (device *MTLDevice) CreateBufferWithBytes(data []float32) *MTLBuffer {
-	bufferID := C.createNewBufferWithBytes(device.deviceID, (*C.float)(unsafe.Pointer(&data[0])), C.ulong(len(data)))
-	contents := unsafe.Pointer(C.getBufferContents(bufferID))
+	bufferID := mtlBufferCreateCreateWithBytes(device.deviceID, data)
+	contents := mtlBufferGetContents(bufferID)
 	bfLength := len(data)
 
 	byteSlice := (*[1 << 30]byte)(contents)[:bfLength:bfLength]
@@ -38,8 +30,8 @@ func (device *MTLDevice) CreateBufferWithBytes(data []float32) *MTLBuffer {
 }
 
 func (device *MTLDevice) CreateNewBufferWithLength(bfLength int) *MTLBuffer {
-	bufferID := C.createNewBufferWithLength(device.deviceID, C.ulong(bfLength))
-	contents := unsafe.Pointer(C.getBufferContents(bufferID))
+	bufferID := mtlBufferCreateWithLength(device.deviceID, bfLength)
+	contents := mtlBufferGetContents(bufferID)
 
 	byteSlice := (*[1 << 30]byte)(contents)[:bfLength:bfLength]
 	float32Slice := *(*[]float32)(unsafe.Pointer(&byteSlice))
@@ -61,7 +53,7 @@ func (buffer *MTLBuffer) GetData() []float32 {
 
 func (buffer *MTLBuffer) Release() {
 	if !buffer.released {
-		C.releaseBuffer(buffer.bufferID)
+		mtlBufferRelease(buffer.bufferID)
 		buffer.released = true
 	}
 }
