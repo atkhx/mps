@@ -54,6 +54,24 @@ type MTLDevice struct {
 	krnSoftmaxTrilBwd unsafe.Pointer
 }
 
+func (device *MTLDevice) CreateCommandQueue() *MTLCommandQueue {
+	queue := NewMTLCommandQueue(device)
+	device.regSource(queue)
+	return queue
+}
+
+func (device *MTLDevice) CreateBufferWithBytes(data []float32) *MTLBuffer {
+	buffer := NewMTLBufferWithBytes(device, data)
+	device.regSource(buffer)
+	return buffer
+}
+
+func (device *MTLDevice) CreateBufferWithLength(bfLength int) *MTLBuffer {
+	buffer := NewMTLBufferWithLength(device, bfLength)
+	device.regSource(buffer)
+	return buffer
+}
+
 func (device *MTLDevice) regSource(source Releasable) {
 	device.resources = append(device.resources, source)
 }

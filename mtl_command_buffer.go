@@ -15,22 +15,12 @@ func CommandBufferFromContext(ctx context.Context) *MTLCommandBuffer {
 	return ctx.Value("MTLCommandBuffer").(*MTLCommandBuffer)
 }
 
-func (queue *MTLCommandQueue) CreateCommandBuffer() *MTLCommandBuffer {
-	switch {
-	case queue.buffer != nil && !queue.buffer.completed:
-		return queue.buffer
-	case queue.buffer != nil && queue.buffer.completed:
-		queue.buffer.Release()
-	}
-
-	buffer := &MTLCommandBuffer{
+func NewMTLCommandBuffer(queue *MTLCommandQueue) *MTLCommandBuffer {
+	return &MTLCommandBuffer{
 		id:       mtlCommandBufferCreate(queue.queueID),
 		deviceID: queue.device.deviceID,
 		device:   queue.device,
 	}
-
-	queue.buffer = buffer
-	return queue.buffer
 }
 
 type MTLCommandBuffer struct {
@@ -51,6 +41,16 @@ func (b *MTLCommandBuffer) Release() {
 		b.released = true
 		b.completed = true
 	}
+}
+
+func (b *MTLCommandBuffer) Wait() {
+	b.exclusive(func() {
+		if b.uncommitted > 0 {
+			mtlCommandBufferCommitAndWaitUntilCompleted(b.id)
+			b.completed = true
+		}
+		b.uncommitted = 0
+	})
 }
 
 func (b *MTLCommandBuffer) exclusive(operation func()) {
@@ -172,12 +172,20 @@ func (b *MTLCommandBuffer) SoftmaxBufferTrilBwd(
 	})
 }
 
-func (b *MTLCommandBuffer) Wait() {
+func (b *MTLCommandBuffer) MatrixMultiplyAB(aM, bM, cM *Matrix, alpha, beta float32) {
+	b.MatrixMultiply(aM, bM, cM, aM.cols, false, false, alpha, beta)
+}
+
+func (b *MTLCommandBuffer) MatrixMultiplyATB(aM, bM, cM *Matrix, alpha, beta float32) {
+	b.MatrixMultiply(aM, bM, cM, aM.cols, false, true, alpha, beta)
+}
+
+func (b *MTLCommandBuffer) MatrixMultiplyTAB(aM, bM, cM *Matrix, alpha, beta float32) {
+	b.MatrixMultiply(aM, bM, cM, bM.rows, true, false, alpha, beta)
+}
+
+func (b *MTLCommandBuffer) MatrixMultiply(aM, bM, cM *Matrix, iC int, aT, bT bool, alpha, beta float32) {
 	b.exclusive(func() {
-		if b.uncommitted > 0 {
-			mtlCommandBufferCommitAndWaitUntilCompleted(b.id)
-			b.completed = true
-		}
-		b.uncommitted = 0
+		mpsMatrixMultiply(b.deviceID, b.id, aM.matrixID, bM.matrixID, cM.matrixID, iC, aT, bT, alpha, beta)
 	})
 }

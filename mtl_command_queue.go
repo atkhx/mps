@@ -3,13 +3,11 @@ package mps
 import "C"
 import "unsafe"
 
-func (device *MTLDevice) CreateCommandQueue() *MTLCommandQueue {
-	queue := &MTLCommandQueue{
+func NewMTLCommandQueue(device *MTLDevice) *MTLCommandQueue {
+	return &MTLCommandQueue{
 		queueID: mtlCommandQueueCreate(device.deviceID),
 		device:  device,
 	}
-	device.regSource(queue)
-	return queue
 }
 
 type MTLCommandQueue struct {
@@ -19,14 +17,22 @@ type MTLCommandQueue struct {
 	buffer   *MTLCommandBuffer
 }
 
-func (d *MTLCommandQueue) GetID() unsafe.Pointer {
-	return d.queueID
+func (queue *MTLCommandQueue) Release() {
+	if !queue.released {
+		queue.buffer.Release()
+		mtlCommandQueueRelease(queue.queueID)
+		queue.released = true
+	}
 }
 
-func (b *MTLCommandQueue) Release() {
-	if !b.released {
-		b.buffer.Release()
-		mtlCommandQueueRelease(b.queueID)
-		b.released = true
+func (queue *MTLCommandQueue) GetCommandBuffer() *MTLCommandBuffer {
+	switch {
+	case queue.buffer != nil && !queue.buffer.completed:
+		return queue.buffer
+	case queue.buffer != nil && queue.buffer.completed:
+		queue.buffer.Release()
 	}
+
+	queue.buffer = NewMTLCommandBuffer(queue)
+	return queue.buffer
 }
