@@ -708,3 +708,21 @@ func TestMTLCommandBuffer_MatrixMultiplyTAB_OneOperationOnOneBuffer(t *testing.T
 		11, 14,
 	}, matrixB.GetData())
 }
+
+func TestMTLCommandBuffer_UpdateWithAdam(t *testing.T) {
+	device := NewMTLDevice()
+	defer device.Release()
+
+	commandQueue := device.CreateCommandQueue()
+	defer commandQueue.Release()
+
+	commandBuffer := commandQueue.GetCommandBuffer()
+	defer commandBuffer.Release()
+
+	dataBuffer := device.CreateNewBufferWithLength(10)
+	gradBuffer := device.CreateNewBufferWithLength(10)
+	mBuffer := device.CreateNewBufferWithLength(10)
+	vBuffer := device.CreateNewBufferWithLength(10)
+
+	commandBuffer.UpdateWithAdam(dataBuffer, gradBuffer, mBuffer, vBuffer, 0.9, 0.98, 0.8, 0.7)
+}
