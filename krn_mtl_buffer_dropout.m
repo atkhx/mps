@@ -30,20 +30,20 @@
     return self;
 }
 
-- (void) dropout:(id<MTLBuffer>)destinationBuffer
-        sourceBuffer:(id<MTLBuffer>)sourceBuffer
-        maskOutBuffer:(id<MTLBuffer>)maskOutBuffer
+- (void) dropout:(id<MTLBuffer>)dstBuffer
+        srcBuffer:(id<MTLBuffer>)srcBuffer
+        mskBuffer:(id<MTLBuffer>)mskBuffer
         probability:(float)probability
         withCommandBuffer:(id<MTLCommandBuffer>)commandBuffer {
 
     id<MTLComputeCommandEncoder> computeEncoder = [commandBuffer computeCommandEncoder];
 
     [computeEncoder setComputePipelineState:_mFunctionPSO];
-    [computeEncoder setBuffer:destinationBuffer offset:0 atIndex:0];
-    [computeEncoder setBuffer:sourceBuffer offset:0 atIndex:1];
-    [computeEncoder setBuffer:maskOutBuffer offset:0 atIndex:2];
+    [computeEncoder setBuffer:dstBuffer offset:0 atIndex:0];
+    [computeEncoder setBuffer:srcBuffer offset:0 atIndex:1];
+    [computeEncoder setBuffer:mskBuffer offset:0 atIndex:2];
     [computeEncoder setBytes:&probability length:sizeof(float) atIndex:3];
-    [computeEncoder dispatchThreads:MTLSizeMake(destinationBuffer.length / 4, 1, 1) threadsPerThreadgroup:MTLSizeMake(256, 1, 1)];
+    [computeEncoder dispatchThreads:MTLSizeMake(dstBuffer.length / 4, 1, 1) threadsPerThreadgroup:MTLSizeMake(256, 1, 1)];
     [computeEncoder endEncoding];
 }
 

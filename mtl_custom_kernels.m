@@ -150,15 +150,15 @@ void* customKernelDropoutCreate(void *deviceID, const char *kernelSource) {
 void customKernelDropout(
     void *kernelID,
     void *commandBufferID,
-    void *destinationBufferID,
-    void *sourceBufferID,
-    void *maskOutBufferID,
+    void *dstBufferID,
+    void *srcBufferID,
+    void *mskBufferID,
     float probability
 ) {
     [(__bridge KernelMTLBufferDropoutImpl*)kernelID
-        dropout:(id<MTLBuffer>)destinationBufferID
-        sourceBuffer:(id<MTLBuffer>)sourceBufferID
-        maskOutBuffer:(id<MTLBuffer>)maskOutBufferID
+        dropout:(id<MTLBuffer>)dstBufferID
+        srcBuffer:(id<MTLBuffer>)srcBufferID
+        mskBuffer:(id<MTLBuffer>)mskBufferID
         probability:probability
         withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
 }

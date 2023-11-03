@@ -111,7 +111,7 @@ func customKernelDropout(
 	commandBufferID,
 	dstBufferID,
 	srcBufferID,
-	maskOutBufferID unsafe.Pointer,
+	mskBufferID unsafe.Pointer,
 	probability float32,
 ) {
 	C.customKernelDropout(
@@ -119,7 +119,7 @@ func customKernelDropout(
 		commandBufferID,
 		dstBufferID,
 		srcBufferID,
-		maskOutBufferID,
+		mskBufferID,
 		C.float(probability),
 	)
 }

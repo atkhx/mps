@@ -3,19 +3,20 @@
 using namespace metal;
 
 kernel void dropout(
-    device float *destinationBuffer [[ buffer(0) ]],
-    device float *sourceBuffer [[ buffer(1) ]],
-    device float *maskOutBuffer [[ buffer(2) ]],
+    device float *dstBuffer [[ buffer(0) ]],
+    device float *srcBuffer [[ buffer(1) ]],
+    device float *mskBuffer [[ buffer(2) ]],
     constant float& probability [[ buffer(3) ]],
     const uint id [[ thread_position_in_grid ]] )
 {
+    // todo change to random filled matrix
     float randomValue = fract(sin(float(id)) * 43758.5453123);
 
-    if (randomValue < probability) {
-        destinationBuffer[id] = 0.0;
-        maskOutBuffer[id] = 0.0;
+    if (randomValue > probability) {
+        dstBuffer[id] = srcBuffer[id];
+        mskBuffer[id] = randomValue;
     } else {
-        destinationBuffer[id] = sourceBuffer[id];
-        maskOutBuffer[id] = 1.0;
+        dstBuffer[id] = 0.0;
+        mskBuffer[id] = randomValue;
     }
 }

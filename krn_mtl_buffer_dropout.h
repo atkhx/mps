@@ -6,9 +6,9 @@
 
 @protocol KernelMTLBufferDropout <NSObject>
 - (instancetype) initWithDevice:(id<MTLDevice>)device kernelSource:(NSString*)kernelSource;
-- (void) dropout:(id<MTLBuffer>)destinationBuffer
-        sourceBuffer:(id<MTLBuffer>)sourceBuffer
-        maskOutBuffer:(id<MTLBuffer>)maskOutBuffer
+- (void) dropout:(id<MTLBuffer>)dstBuffer
+        srcBuffer:(id<MTLBuffer>)srcBuffer
+        mskBuffer:(id<MTLBuffer>)mskBuffer
         probability:(float)probability
         withCommandBuffer:(id<MTLCommandBuffer>)commandBuffer;
 @end

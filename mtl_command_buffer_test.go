@@ -272,15 +272,14 @@ func TestMTLCommandBuffer_DropoutBuffer(t *testing.T) {
 	commandBuffer.Wait()
 
 	for i := 0; i < len(destinationBuffer.GetData()); i++ {
-		switch v := maskOutBuffer.GetData()[i]; v {
-		case 1.0:
+		if v := maskOutBuffer.GetData()[i]; v > 0.2 {
 			require.Equal(t, sourceBuffer.GetData()[i], destinationBuffer.GetData()[i])
-		case 0.0:
+		} else {
 			require.Zero(t, destinationBuffer.GetData()[i])
-		default:
-			t.Errorf("invlice maskoutBuffer value: %f", v)
 		}
 	}
+
+	fmt.Println(maskOutBuffer.GetData())
 }
 
 func TestMTLCommandBuffer_SoftmaxBuffer(t *testing.T) {

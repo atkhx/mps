@@ -115,18 +115,18 @@ func (b *MTLCommandBuffer) Mul(dst, src *MTLBuffer) {
 }
 
 func (b *MTLCommandBuffer) DropoutBuffer(
-	destinationBuffer,
-	sourceBuffer,
-	maskOutBuffer *MTLBuffer,
+	dstBuffer,
+	srcBuffer,
+	mskBuffer *MTLBuffer,
 	probability float32,
 ) {
 	b.exclusive(func() {
 		customKernelDropout(
 			b.device.krnDropout,
 			b.id,
-			destinationBuffer.bufferID,
-			sourceBuffer.bufferID,
-			maskOutBuffer.bufferID,
+			dstBuffer.bufferID,
+			srcBuffer.bufferID,
+			mskBuffer.bufferID,
 			probability,
 		)
 	})

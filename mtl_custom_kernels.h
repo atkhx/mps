@@ -79,9 +79,9 @@ void* customKernelDropoutCreate(void *deviceID, const char *kernelSource);
 void customKernelDropout(
     void *kernelID,
     void *commandBufferID,
-    void *destinationBufferID,
-    void *sourceBufferID,
-    void *maskOutBufferID,
+    void *dstBufferID,
+    void *srcBufferID,
+    void *mskBufferID,
     float probability
 );
 
