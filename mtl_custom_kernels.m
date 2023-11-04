@@ -163,6 +163,22 @@ void customKernelDropout(
         withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
 }
 
+void customKernelDropoutBwd(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    void *srcBufferID,
+    void *mskBufferID,
+    float probability
+) {
+    [(__bridge KernelMTLBufferDropoutImpl*)kernelID
+        dropoutBwd:(id<MTLBuffer>)dstBufferID
+        srcBuffer:(id<MTLBuffer>)srcBufferID
+        mskBuffer:(id<MTLBuffer>)mskBufferID
+        probability:probability
+        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
+}
+
 // CustomKernelSoftmax
 
 void* customKernelSoftmaxCreate(void *deviceID, const char *kernelSource) {

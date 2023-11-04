@@ -132,6 +132,24 @@ func (b *MTLCommandBuffer) DropoutBuffer(
 	})
 }
 
+func (b *MTLCommandBuffer) DropoutBwdBuffer(
+	dstBuffer,
+	srcBuffer,
+	mskBuffer *MTLBuffer,
+	probability float32,
+) {
+	b.exclusive(func() {
+		customKernelDropoutBwd(
+			b.device.krnDropout,
+			b.id,
+			dstBuffer.bufferID,
+			srcBuffer.bufferID,
+			mskBuffer.bufferID,
+			probability,
+		)
+	})
+}
+
 func (b *MTLCommandBuffer) SoftmaxBuffer(
 	destinationBuffer *MTLBuffer,
 	sourceBuffer *MTLBuffer,
@@ -205,6 +223,12 @@ func (b *MTLCommandBuffer) MatrixMultiplyTAB(aM, bM, cM *Matrix, alpha, beta flo
 func (b *MTLCommandBuffer) MatrixMultiply(aM, bM, cM *Matrix, iC int, aT, bT bool, alpha, beta float32) {
 	b.exclusive(func() {
 		mpsMatrixMultiply(b.deviceID, b.id, aM.matrixID, bM.matrixID, cM.matrixID, iC, aT, bT, alpha, beta)
+	})
+}
+
+func (b *MTLCommandBuffer) MatrixRandom(randomizer *MatrixRandomMTGP32, aM *Matrix) {
+	b.exclusive(func() {
+		mpsMatrixRandom(randomizer.id, b.id, aM.matrixID)
 	})
 }
 

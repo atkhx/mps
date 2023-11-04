@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -261,25 +262,77 @@ func TestMTLCommandBuffer_DropoutBuffer(t *testing.T) {
 	sourceBuffer := device.CreateNewBufferWithLength(32)
 	defer sourceBuffer.Release()
 
-	maskOutBuffer := device.CreateNewBufferWithLength(32)
-	defer maskOutBuffer.Release()
+	buffer := device.CreateNewBufferWithLength(32)
+	defer buffer.Release()
+
+	maskMatrix := buffer.CreateMatrix(8, 4, 0)
+	defer maskMatrix.Release()
 
 	for i := 0; i < len(destinationBuffer.GetData()); i++ {
 		sourceBuffer.GetData()[i] = rand.Float32()
 	}
 
-	commandBuffer.DropoutBuffer(destinationBuffer, sourceBuffer, maskOutBuffer, 0.2)
+	distribution := device.CreateMatrixRandomDistribution(0, 1)
+	randomizer := device.CreateMatrixRandomMTGP32(distribution, uint64(time.Now().UnixNano()))
+
+	commandBuffer.MatrixRandom(randomizer, maskMatrix)
+	commandBuffer.DropoutBuffer(destinationBuffer, sourceBuffer, buffer, 0.2)
 	commandBuffer.Wait()
 
 	for i := 0; i < len(destinationBuffer.GetData()); i++ {
-		if v := maskOutBuffer.GetData()[i]; v > 0.2 {
+		if v := buffer.GetData()[i]; v > 0.2 {
 			require.Equal(t, sourceBuffer.GetData()[i], destinationBuffer.GetData()[i])
 		} else {
 			require.Zero(t, destinationBuffer.GetData()[i])
 		}
 	}
 
-	fmt.Println(maskOutBuffer.GetData())
+	fmt.Println(buffer.GetData())
+}
+
+func TestMTLCommandBuffer_DropoutBwdBuffer(t *testing.T) {
+	device := NewMTLDevice()
+	defer device.Release()
+
+	commandQueue := device.CreateCommandQueue()
+	defer commandQueue.Release()
+
+	commandBuffer := commandQueue.GetCommandBuffer()
+	defer commandBuffer.Release()
+
+	destinationBuffer := device.CreateNewBufferWithLength(32)
+	defer destinationBuffer.Release()
+
+	sourceBuffer := device.CreateNewBufferWithLength(32)
+	defer sourceBuffer.Release()
+
+	buffer := device.CreateNewBufferWithLength(32)
+	defer buffer.Release()
+
+	maskMatrix := buffer.CreateMatrix(8, 4, 0)
+	defer maskMatrix.Release()
+
+	for i := 0; i < len(destinationBuffer.GetData()); i++ {
+		sourceBuffer.GetData()[i] = rand.Float32()
+		destinationBuffer.GetData()[i] = 1
+	}
+
+	distribution := device.CreateMatrixRandomDistribution(0, 1)
+	randomizer := device.CreateMatrixRandomMTGP32(distribution, uint64(time.Now().UnixNano()))
+
+	commandBuffer.MatrixRandom(randomizer, maskMatrix)
+	commandBuffer.DropoutBwdBuffer(destinationBuffer, sourceBuffer, buffer, 0.2)
+	commandBuffer.Wait()
+
+	for i := 0; i < len(destinationBuffer.GetData()); i++ {
+		if v := buffer.GetData()[i]; v > 0.2 {
+			require.Equal(t, sourceBuffer.GetData()[i]+1.0, destinationBuffer.GetData()[i])
+		} else {
+			require.Equal(t, float32(1), destinationBuffer.GetData()[i])
+		}
+	}
+
+	fmt.Println(buffer.GetData())
 }
 
 func TestMTLCommandBuffer_SoftmaxBuffer(t *testing.T) {
@@ -803,4 +856,37 @@ func TestMTLCommandBuffer_UpdateWithAdam(t *testing.T) {
 	vBuffer := device.CreateNewBufferWithLength(10)
 
 	commandBuffer.UpdateWithAdam(dataBuffer, gradBuffer, mBuffer, vBuffer, 0.9, 0.98, 0.8, 0.7)
+}
+
+func TestMTLCommandBuffer_MatrixRandom(t *testing.T) {
+	device := NewMTLDevice()
+	defer device.Release()
+
+	commandQueue := device.CreateCommandQueue()
+	defer commandQueue.Release()
+
+	commandBuffer1 := commandQueue.GetCommandBuffer()
+	defer commandBuffer1.Release()
+
+	aW, aH := 3, 4
+
+	buffer := device.CreateNewBufferWithLength(aW * aH)
+	defer buffer.Release()
+
+	matrixA := buffer.CreateMatrix(aW, aH, 0)
+	defer matrixA.Release()
+
+	distribution := device.CreateMatrixRandomDistribution(0, 1)
+	randomizer := device.CreateMatrixRandomMTGP32(distribution, uint64(time.Now().UnixNano()))
+
+	commandBuffer1.MatrixRandom(randomizer, matrixA)
+	commandBuffer1.Wait()
+	fmt.Println(matrixA.GetData())
+
+	commandBuffer2 := commandQueue.GetCommandBuffer()
+	defer commandBuffer2.Release()
+
+	commandBuffer2.MatrixRandom(randomizer, matrixA)
+	commandBuffer2.Wait()
+	fmt.Println(matrixA.GetData())
 }

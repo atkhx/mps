@@ -5,12 +5,21 @@
 #import <Metal/Metal.h>
 
 @protocol KernelMTLBufferDropout <NSObject>
+
 - (instancetype) initWithDevice:(id<MTLDevice>)device kernelSource:(NSString*)kernelSource;
+
 - (void) dropout:(id<MTLBuffer>)dstBuffer
         srcBuffer:(id<MTLBuffer>)srcBuffer
         mskBuffer:(id<MTLBuffer>)mskBuffer
         probability:(float)probability
         withCommandBuffer:(id<MTLCommandBuffer>)commandBuffer;
+
+- (void) dropoutBwd:(id<MTLBuffer>)dstBuffer
+        srcBuffer:(id<MTLBuffer>)srcBuffer
+        mskBuffer:(id<MTLBuffer>)mskBuffer
+        probability:(float)probability
+        withCommandBuffer:(id<MTLCommandBuffer>)commandBuffer;
+
 @end
 
 

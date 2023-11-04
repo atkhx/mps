@@ -124,6 +124,24 @@ func customKernelDropout(
 	)
 }
 
+func customKernelDropoutBwd(
+	kernelID,
+	commandBufferID,
+	dstBufferID,
+	srcBufferID,
+	mskBufferID unsafe.Pointer,
+	probability float32,
+) {
+	C.customKernelDropoutBwd(
+		kernelID,
+		commandBufferID,
+		dstBufferID,
+		srcBufferID,
+		mskBufferID,
+		C.float(probability),
+	)
+}
+
 //go:embed krn_mtl_buffer_softmax.metal
 var kernelSoftmax string
 

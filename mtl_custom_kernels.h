@@ -84,6 +84,14 @@ void customKernelDropout(
     void *mskBufferID,
     float probability
 );
+void customKernelDropoutBwd(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    void *srcBufferID,
+    void *mskBufferID,
+    float probability
+);
 
 // CustomKernelSoftmax
 

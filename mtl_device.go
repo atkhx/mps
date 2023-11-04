@@ -78,6 +78,29 @@ func (device *MTLDevice) CreateBufferWithLength(bfLength int) *MTLBuffer {
 	return buffer
 }
 
+type MatrixRandomDistribution struct {
+	id unsafe.Pointer
+}
+
+func (device *MTLDevice) CreateMatrixRandomDistribution(min, max float32) *MatrixRandomDistribution {
+	return &MatrixRandomDistribution{id: mpsMatrixRandomDistributionCreate(min, max)}
+}
+
+type MatrixRandomMTGP32 struct {
+	id unsafe.Pointer
+}
+
+func (device *MTLDevice) CreateMatrixRandomMTGP32(
+	distribution *MatrixRandomDistribution,
+	seed uint64,
+) *MatrixRandomMTGP32 {
+	return &MatrixRandomMTGP32{id: mpsMatrixRandomMTGP32Create(
+		device.deviceID,
+		distribution.id,
+		seed,
+	)}
+}
+
 func (device *MTLDevice) regSource(source Releasable) {
 	device.resources = append(device.resources, source)
 }
