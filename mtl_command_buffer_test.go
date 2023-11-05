@@ -240,7 +240,7 @@ func TestMTLCommandBuffer_Mul(t *testing.T) {
 	multiplier := device.CreateBufferWithBytes([]float32{5, 4, 3, 2, 1})
 	defer multiplier.Release()
 
-	commandBuffer.Mul(destination, multiplier)
+	commandBuffer.Mul(destination, multiplier, 0, 0, 5)
 	commandBuffer.Wait()
 
 	require.Equal(t, []float32{5, 8, 9, 8, 5}, destination.GetData())

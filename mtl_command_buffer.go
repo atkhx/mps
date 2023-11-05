@@ -60,57 +60,77 @@ func (b *MTLCommandBuffer) exclusive(operation func()) {
 	b.mu.Unlock()
 }
 
+func (b *MTLCommandBuffer) Copy(dst, src *MTLBuffer, dstOffset, srcOffset, length int) {
+	b.exclusive(func() {
+		customKernelCopy(b.device.customKernels, b.id, dst.bufferID, src.bufferID, dstOffset, srcOffset, length)
+	})
+}
+
 func (b *MTLCommandBuffer) ClearMTLBuffer(buffer *MTLBuffer) {
 	b.exclusive(func() {
-		customKernelFill(b.device.krnFill, b.id, buffer.bufferID, 0.0)
+		customKernelFill(b.device.customKernels, b.id, buffer.bufferID, 0.0, 0, buffer.length)
 	})
 }
 
 func (b *MTLCommandBuffer) FillMTLBuffer(buffer *MTLBuffer, value float32) {
 	b.exclusive(func() {
-		customKernelFill(b.device.krnFill, b.id, buffer.bufferID, value)
+		customKernelFill(b.device.customKernels, b.id, buffer.bufferID, value, 0, buffer.length)
 	})
 }
 
 func (b *MTLCommandBuffer) FillMTLBufferPart(buffer *MTLBuffer, value float32, offset, length int) {
 	b.exclusive(func() {
-		customKernelFillPart(b.device.krnFill, b.id, buffer.bufferID, offset, length, value)
-	})
-}
-
-func (b *MTLCommandBuffer) Copy(dst, src *MTLBuffer, dstOffset, srcOffset, length int) {
-	b.exclusive(func() {
-		customKernelCopy(b.device.krnCopy, b.id, dst.bufferID, src.bufferID, dstOffset, srcOffset, length)
-	})
-}
-
-func (b *MTLCommandBuffer) ReLuMTLBuffer(destinationBuffer, sourceBuffer *MTLBuffer) {
-	b.exclusive(func() {
-		customKernelReLUForward(b.device.krnReLUFwd, b.id, destinationBuffer.bufferID, sourceBuffer.bufferID)
-	})
-}
-
-func (b *MTLCommandBuffer) ReLuMTLBufferBwd(destinationBuffer, sourceBuffer, maskBuffer *MTLBuffer) {
-	b.exclusive(func() {
-		customKernelReLUBackward(b.device.krnReLUBwd, b.id, destinationBuffer.bufferID, sourceBuffer.bufferID, maskBuffer.bufferID)
+		customKernelFill(b.device.customKernels, b.id, buffer.bufferID, value, offset, length)
 	})
 }
 
 func (b *MTLCommandBuffer) Add(dst, src *MTLBuffer, dstOffset, srcOffset, length int) {
 	b.exclusive(func() {
-		customKernelAdd(b.device.krnAdd, b.id, dst.bufferID, src.bufferID, dstOffset, srcOffset, length)
+		customKernelAdd(b.device.customKernels, b.id, dst.bufferID, src.bufferID, dstOffset, srcOffset, length)
 	})
 }
 
 func (b *MTLCommandBuffer) AddTo(dst, aBuffer, bBuffer *MTLBuffer) {
 	b.exclusive(func() {
-		customKernelAddTo(b.device.krnAdd, b.id, dst.bufferID, aBuffer.bufferID, bBuffer.bufferID)
+		customKernelAddTo(b.device.customKernels, b.id, dst.bufferID, aBuffer.bufferID, bBuffer.bufferID)
 	})
 }
 
-func (b *MTLCommandBuffer) Mul(dst, src *MTLBuffer) {
+func (b *MTLCommandBuffer) Mul(dst, src *MTLBuffer, dstOffset, srcOffset, length int) {
 	b.exclusive(func() {
-		customKernelMul(b.device.krnMul, b.id, dst.bufferID, src.bufferID)
+		customKernelMul(b.device.customKernels, b.id, dst.bufferID, src.bufferID, dstOffset, srcOffset, length)
+	})
+}
+
+func (b *MTLCommandBuffer) ReLuMTLBuffer(dstBuffer, srcBuffer *MTLBuffer) {
+	b.exclusive(func() {
+		customKernelReLU(b.device.customKernels, b.id, dstBuffer.bufferID, srcBuffer.bufferID)
+	})
+}
+
+func (b *MTLCommandBuffer) ReLuMTLBufferBwd(dstBuffer, srcBuffer, maskBuffer *MTLBuffer) {
+	b.exclusive(func() {
+		customKernelReLUBackward(b.device.customKernels, b.id, dstBuffer.bufferID, srcBuffer.bufferID, maskBuffer.bufferID)
+	})
+}
+
+func (b *MTLCommandBuffer) SoftmaxBuffer(
+	destinationBuffer *MTLBuffer,
+	sourceBuffer *MTLBuffer,
+	sumOutBuffer *MTLBuffer,
+	colsCount, rowsCount, offset int,
+) {
+	b.exclusive(func() {
+		customKernelSoftmaxForward(
+			b.device.customKernels,
+			b.id,
+			destinationBuffer.bufferID,
+			sourceBuffer.bufferID,
+			sumOutBuffer.bufferID,
+			colsCount,
+			rowsCount,
+			offset,
+		)
 	})
 }
 
@@ -122,7 +142,7 @@ func (b *MTLCommandBuffer) DropoutBuffer(
 ) {
 	b.exclusive(func() {
 		customKernelDropout(
-			b.device.krnDropout,
+			b.device.customKernels,
 			b.id,
 			dstBuffer.bufferID,
 			srcBuffer.bufferID,
@@ -140,7 +160,7 @@ func (b *MTLCommandBuffer) DropoutBwdBuffer(
 ) {
 	b.exclusive(func() {
 		customKernelDropoutBwd(
-			b.device.krnDropout,
+			b.device.customKernels,
 			b.id,
 			dstBuffer.bufferID,
 			srcBuffer.bufferID,
@@ -150,25 +170,33 @@ func (b *MTLCommandBuffer) DropoutBwdBuffer(
 	})
 }
 
-func (b *MTLCommandBuffer) SoftmaxBuffer(
-	destinationBuffer *MTLBuffer,
-	sourceBuffer *MTLBuffer,
-	sumOutBuffer *MTLBuffer,
-	colsCount, rowsCount, offset int,
+func (b *MTLCommandBuffer) UpdateWithAdam(
+	dataBuffer,
+	gradBuffer,
+	mBuffer,
+	vBuffer *MTLBuffer,
+
+	beta1,
+	beta2,
+	beta1powIterationLR,
+	beta2powIteration float32,
 ) {
 	b.exclusive(func() {
-		customKernelSoftmaxForward(
-			b.device.krnSoftmax,
-			b.id,
-			destinationBuffer.bufferID,
-			sourceBuffer.bufferID,
-			sumOutBuffer.bufferID,
-			colsCount,
-			rowsCount,
-			offset,
+		customKernelUpdateWithAdam(
+			b.device.customKernels, b.id,
+			dataBuffer.bufferID,
+			gradBuffer.bufferID,
+			mBuffer.bufferID,
+			vBuffer.bufferID,
+			beta1,
+			beta2,
+			beta1powIterationLR,
+			beta2powIteration,
 		)
 	})
 }
+
+// not refactored part
 
 func (b *MTLCommandBuffer) SoftmaxBufferTril(
 	destinationBuffer *MTLBuffer,
@@ -177,7 +205,7 @@ func (b *MTLCommandBuffer) SoftmaxBufferTril(
 ) {
 	b.exclusive(func() {
 		customKernelSoftmaxTrilFwdCreate(
-			b.device.krnSoftmaxTrilFwd,
+			b.device.customKernels,
 			b.id,
 			destinationBuffer.bufferID,
 			sourceBuffer.bufferID,
@@ -196,7 +224,7 @@ func (b *MTLCommandBuffer) SoftmaxBufferTrilBwd(
 ) {
 	b.exclusive(func() {
 		customKernelSoftmaxTrilBackward(
-			b.device.krnSoftmaxTrilBwd,
+			b.device.customKernels,
 			b.id,
 			destinationBuffer.bufferID,
 			sourceBuffer.bufferID,
@@ -229,31 +257,5 @@ func (b *MTLCommandBuffer) MatrixMultiply(aM, bM, cM *Matrix, iC int, aT, bT boo
 func (b *MTLCommandBuffer) MatrixRandom(randomizer *MatrixRandomMTGP32, aM *Matrix) {
 	b.exclusive(func() {
 		mpsMatrixRandom(randomizer.id, b.id, aM.matrixID)
-	})
-}
-
-func (b *MTLCommandBuffer) UpdateWithAdam(
-	dataBuffer,
-	gradBuffer,
-	mBuffer,
-	vBuffer *MTLBuffer,
-
-	beta1,
-	beta2,
-	beta1powIterationLR,
-	beta2powIteration float32,
-) {
-	b.exclusive(func() {
-		customKernelUpdateWithAdam(
-			b.device.krnUpdateWithAdam, b.id,
-			dataBuffer.bufferID,
-			gradBuffer.bufferID,
-			mBuffer.bufferID,
-			vBuffer.bufferID,
-			beta1,
-			beta2,
-			beta1powIterationLR,
-			beta2powIteration,
-		)
 	})
 }

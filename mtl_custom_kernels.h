@@ -2,27 +2,12 @@
 #include <MetalPerformanceShaders/MetalPerformanceShaders.h>
 #include <Metal/Metal.h>
 
-#include "krn_mtl_buffer_fill.h"
-#include "krn_mtl_buffer_copy.h"
-#include "krn_mtl_buffer_relu_fwd.h"
-#include "krn_mtl_buffer_relu_bwd.h"
-#include "krn_mtl_buffer_add.h"
-#include "krn_mtl_buffer_mul.h"
-#include "krn_mtl_buffer_dropout.h"
-#include "krn_mtl_buffer_softmax.h"
-#include "krn_mtl_buffer_softmax_tril.h"
-#include "krn_mtl_buffer_softmax_tril_bwd.h"
-#include "krn_mtl_buffer_update_with_adam.h"
+#include "custom_kernel.h"
 
-// CustomKernelFill
+// CustomKernels
 
-void* customKernelFillCreate(void *deviceID, const char *kernelSource);
-void customKernelFill(void *kernelID, void *commandBufferID, void *bufferID, float value);
-void customKernelFillPart(void *kernelID, void *commandBufferID, void *bufferID, const uint offset, const uint length, float value);
+void* customKernelsCreate(void *deviceID, const char *kernelSource);
 
-// CustomKernelCopy
-
-void* customKernelCopyCreate(void *deviceID, const char *kernelSource);
 void customKernelCopy(
     void *kernelID,
     void *commandBufferID,
@@ -33,19 +18,15 @@ void customKernelCopy(
     const uint length
 );
 
-// CustomKernelReLUFwd
+void customKernelFill(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    float value,
+    const uint offset,
+    const uint length
+);
 
-void* customKernelReLUFwdCreate(void *deviceID, const char *kernelSource);
-void customKernelReLUFwd(void *kernelID, void *commandBufferID, void *destinationBufferID, void *sourceBufferID);
-
-// CustomKernelReLUBwd
-
-void* customKernelReLUBwdCreate(void *deviceID, const char *kernelSource);
-void customKernelReLUBwd(void *kernelID, void *commandBufferID, void *destinationBufferID, void *sourceBufferID, void *maskBufferID);
-
-// CustomKernelAdd
-
-void* customKernelAddCreate(void *deviceID, const char *kernelSource);
 void customKernelAdd(
     void *kernelID,
     void *commandBufferID,
@@ -63,19 +44,41 @@ void customKernelAddTo(
     void *bBuffer
 );
 
-// CustomKernelMul
-
-void* customKernelMulCreate(void *deviceID, const char *kernelSource);
 void customKernelMul(
     void *kernelID,
     void *commandBufferID,
-    void *destinationBufferID,
-    void *multiplierBufferID
+    void *dstBufferID,
+    void *srcBufferID,
+    const uint dstOffset,
+    const uint srcOffset,
+    const uint length
 );
 
-// CustomKernelDropout
+void customKernelReLU(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    void *srcBufferID
+);
+void customKernelReLUBwd(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    void *srcBufferID,
+    void *mskBufferID
+);
 
-void* customKernelDropoutCreate(void *deviceID, const char *kernelSource);
+void customKernelSoftmax(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    void *srcBufferID,
+    void *sumBufferID,
+    uint colsCount,
+    uint rowsCount,
+    uint offset
+);
+
 void customKernelDropout(
     void *kernelID,
     void *commandBufferID,
@@ -93,51 +96,6 @@ void customKernelDropoutBwd(
     float probability
 );
 
-// CustomKernelSoftmax
-
-void* customKernelSoftmaxCreate(void *deviceID, const char *kernelSource);
-void customKernelSoftmax(
-    void *kernelID,
-    void *commandBufferID,
-    void *destinationBufferID,
-    void *sourceBufferID,
-    void *sumOutBufferID,
-    uint colsCount,
-    uint rowsCount,
-    uint offset
-);
-
-// customKernelSoftmaxFwdTril
-
-void* customKernelSoftmaxTrilFwdCreate(void *deviceID, const char *kernelSource);
-void customKernelSoftmaxTrilFwd(
-    void *kernelID,
-    void *commandBufferID,
-    void *destinationBufferID,
-    void *sourceBufferID,
-    uint colsCount,
-    uint rowsCount,
-    uint offset
-);
-
-// customKernelSoftmaxBwdTril
-
-void* customKernelSoftmaxTrilBwdCreate(void *deviceID, const char *kernelSource);
-void customKernelSoftmaxTrilBwd(
-    void *kernelID,
-    void *commandBufferID,
-    void *destinationBufferID,
-    void *sourceBufferID,
-    void *softmaxBufferID,
-    uint colsCount,
-    uint rowsCount,
-    uint offset
-);
-
-
-// customKernelUpdateWithAdam
-
-void* customKernelUpdateWithAdamCreate(void *deviceID, const char *kernelSource);
 void customKernelUpdateWithAdam(
     void *kernelID,
     void *commandBufferID,
@@ -153,3 +111,23 @@ void customKernelUpdateWithAdam(
     float beta2powIteration
 );
 
+void customKernelSoftmaxTrilFwd(
+    void *kernelID,
+    void *commandBufferID,
+    void *destinationBufferID,
+    void *sourceBufferID,
+    uint colsCount,
+    uint rowsCount,
+    uint offset
+);
+
+void customKernelSoftmaxTrilBwd(
+    void *kernelID,
+    void *commandBufferID,
+    void *destinationBufferID,
+    void *sourceBufferID,
+    void *softmaxBufferID,
+    uint colsCount,
+    uint rowsCount,
+    uint offset
+);

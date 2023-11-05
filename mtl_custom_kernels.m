@@ -1,31 +1,9 @@
 #include "mtl_custom_kernels.h"
 
-// CustomKernelFill
+// CustomKernels
 
-void* customKernelFillCreate(void *deviceID, const char *kernelSource) {
-    return [[KernelMTLBufferFillImpl alloc]
-        initWithDevice:(id<MTLDevice>)deviceID
-        kernelSource:[NSString stringWithUTF8String:kernelSource]];
-}
-
-void customKernelFill(void *kernelID, void *commandBufferID, void *bufferID, float value) {
-    [(__bridge KernelMTLBufferFillImpl*)kernelID
-        fill:(id<MTLBuffer>)bufferID withValue:value
-        commandBuffer:(id<MTLCommandBuffer>)commandBufferID];
-}
-
-void customKernelFillPart(void *kernelID, void *commandBufferID, void *bufferID, const uint offset, const uint length, float value) {
-    [(__bridge KernelMTLBufferFillImpl*)kernelID
-        fillPart:(id<MTLBuffer>)bufferID withValue:value
-        commandBuffer:(id<MTLCommandBuffer>)commandBufferID
-        offset:offset
-        length:length];
-}
-
-// CustomKernelCopy
-
-void* customKernelCopyCreate(void *deviceID, const char *kernelSource) {
-    return [[KernelMTLBufferCopyImpl alloc]
+void* customKernelsCreate(void *deviceID, const char *kernelSource) {
+    return [[MPSCustomKernelImpl alloc]
         initWithDevice:(id<MTLDevice>)deviceID
         kernelSource:[NSString stringWithUTF8String:kernelSource]];
 }
@@ -39,52 +17,27 @@ void customKernelCopy(
     const uint srcOffset,
     const uint length
 ) {
-    [(__bridge KernelMTLBufferCopyImpl*)kernelID
-        copy:(id<MTLBuffer>)dstBufferID
+    [(__bridge MPSCustomKernelImpl*)kernelID copy:(id<MTLCommandBuffer>)commandBufferID
+        dstBuffer:(id<MTLBuffer>)dstBufferID
         srcBuffer:(id<MTLBuffer>)srcBufferID
         dstOffset:dstOffset
         srcOffset:srcOffset
-        length:length
-        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
+        length:length];
 }
 
-// CustomKernelReLUFwd
-
-void* customKernelReLUFwdCreate(void *deviceID, const char *kernelSource) {
-    return [[KernelMTLBufferReluFwdImpl alloc]
-        initWithDevice:(id<MTLDevice>)deviceID
-        kernelSource:[NSString stringWithUTF8String:kernelSource]];
-}
-
-void customKernelReLUFwd(void *kernelID, void *commandBufferID, void *destinationBufferID, void *sourceBufferID) {
-    [(__bridge KernelMTLBufferReluFwdImpl*)kernelID
-        reluFwd:(id<MTLBuffer>)destinationBufferID
-        sourceBuffer:(id<MTLBuffer>)sourceBufferID
-        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
-}
-
-// CustomKernelReLUBwd
-
-void* customKernelReLUBwdCreate(void *deviceID, const char *kernelSource) {
-    return [[KernelMTLBufferReluBwdImpl alloc]
-        initWithDevice:(id<MTLDevice>)deviceID
-        kernelSource:[NSString stringWithUTF8String:kernelSource]];
-}
-
-void customKernelReLUBwd(void *kernelID, void *commandBufferID, void *destinationBufferID, void *sourceBufferID, void *maskBufferID) {
-    [(__bridge KernelMTLBufferReluBwdImpl*)kernelID
-        reluBwd:(id<MTLBuffer>)destinationBufferID
-        sourceBuffer:(id<MTLBuffer>)sourceBufferID
-        maskBuffer:(id<MTLBuffer>)maskBufferID
-        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
-}
-
-// CustomKernelAddl
-
-void* customKernelAddCreate(void *deviceID, const char *kernelSource) {
-    return [[KernelMTLBufferAddImpl alloc]
-        initWithDevice:(id<MTLDevice>)deviceID
-        kernelSource:[NSString stringWithUTF8String:kernelSource]];
+void customKernelFill(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    float value,
+    const uint offset,
+    const uint length
+) {
+    [(__bridge MPSCustomKernelImpl*)kernelID fill:(id<MTLCommandBuffer>)commandBufferID
+        dstBuffer:(id<MTLBuffer>)dstBufferID
+        value:value
+        offset:offset
+        length:length];
 }
 
 void customKernelAdd(
@@ -96,13 +49,12 @@ void customKernelAdd(
     const uint srcOffset,
     const uint length
 ) {
-    [(__bridge KernelMTLBufferAddImpl*)kernelID
-        add:(id<MTLBuffer>)dstBufferID
+    [(__bridge MPSCustomKernelImpl*)kernelID add:(id<MTLCommandBuffer>)commandBufferID
+        dstBuffer:(id<MTLBuffer>)dstBufferID
         srcBuffer:(id<MTLBuffer>)srcBufferID
         dstOffset:dstOffset
         srcOffset:srcOffset
-        length:length
-        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
+        length:length];
 }
 
 void customKernelAddTo(
@@ -112,39 +64,70 @@ void customKernelAddTo(
     void *aBuffer,
     void *bBuffer
 ) {
-    [(__bridge KernelMTLBufferAddImpl*)kernelID
-        addTo:(id<MTLBuffer>)dstBufferID
+    [(__bridge MPSCustomKernelImpl*)kernelID addTo:(id<MTLCommandBuffer>)commandBufferID
+        dstBuffer:(id<MTLBuffer>)dstBufferID
         aBuffer:(id<MTLBuffer>)aBuffer
-        bBuffer:(id<MTLBuffer>)bBuffer
-        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
-}
-
-// CustomKernelMull
-
-void* customKernelMulCreate(void *deviceID, const char *kernelSource) {
-    return [[KernelMTLBufferMulImpl alloc]
-        initWithDevice:(id<MTLDevice>)deviceID
-        kernelSource:[NSString stringWithUTF8String:kernelSource]];
+        bBuffer:(id<MTLBuffer>)bBuffer];
 }
 
 void customKernelMul(
     void *kernelID,
     void *commandBufferID,
-    void *destinationBufferID,
-    void *multiplierBufferID
+    void *dstBufferID,
+    void *srcBufferID,
+    const uint dstOffset,
+    const uint srcOffset,
+    const uint length
 ) {
-    [(__bridge KernelMTLBufferMulImpl*)kernelID
-        mul:(id<MTLBuffer>)destinationBufferID
-        multiplierBuffer:(id<MTLBuffer>)multiplierBufferID
-        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
+    [(__bridge MPSCustomKernelImpl*)kernelID mul:(id<MTLCommandBuffer>)commandBufferID
+        dstBuffer:(id<MTLBuffer>)dstBufferID
+        srcBuffer:(id<MTLBuffer>)srcBufferID
+        dstOffset:dstOffset
+        srcOffset:srcOffset
+        length:length];
 }
 
-// CustomKernelDropout
+void customKernelReLU(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    void *srcBufferID
+) {
+    [(__bridge MPSCustomKernelImpl*)kernelID relu:(id<MTLCommandBuffer>)commandBufferID
+        dstBuffer:(id<MTLBuffer>)dstBufferID
+        srcBuffer:(id<MTLBuffer>)srcBufferID];
+}
 
-void* customKernelDropoutCreate(void *deviceID, const char *kernelSource) {
-    return [[KernelMTLBufferDropoutImpl alloc]
-        initWithDevice:(id<MTLDevice>)deviceID
-        kernelSource:[NSString stringWithUTF8String:kernelSource]];
+void customKernelReLUBwd(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    void *srcBufferID,
+    void *mskBufferID
+) {
+    [(__bridge MPSCustomKernelImpl*)kernelID reluBwd:(id<MTLCommandBuffer>)commandBufferID
+        dstBuffer:(id<MTLBuffer>)dstBufferID
+        srcBuffer:(id<MTLBuffer>)srcBufferID
+        mskBuffer:(id<MTLBuffer>)mskBufferID];
+}
+
+void customKernelSoftmax(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    void *srcBufferID,
+    void *sumBufferID,
+    uint colsCount,
+    uint rowsCount,
+    uint offset
+) {
+    [(__bridge MPSCustomKernelImpl*)kernelID softmax:(id<MTLCommandBuffer>)commandBufferID
+        dstBuffer:(id<MTLBuffer>)dstBufferID
+        srcBuffer:(id<MTLBuffer>)srcBufferID
+        sumBuffer:(id<MTLBuffer>)sumBufferID
+        colsCount:colsCount
+        rowsCount:rowsCount
+        offset:offset];
 }
 
 void customKernelDropout(
@@ -155,12 +138,11 @@ void customKernelDropout(
     void *mskBufferID,
     float probability
 ) {
-    [(__bridge KernelMTLBufferDropoutImpl*)kernelID
-        dropout:(id<MTLBuffer>)dstBufferID
+    [(__bridge MPSCustomKernelImpl*)kernelID dropout:(id<MTLCommandBuffer>)commandBufferID
+        dstBuffer:(id<MTLBuffer>)dstBufferID
         srcBuffer:(id<MTLBuffer>)srcBufferID
         mskBuffer:(id<MTLBuffer>)mskBufferID
-        probability:probability
-        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
+        probability:probability];
 }
 
 void customKernelDropoutBwd(
@@ -171,102 +153,12 @@ void customKernelDropoutBwd(
     void *mskBufferID,
     float probability
 ) {
-    [(__bridge KernelMTLBufferDropoutImpl*)kernelID
+    [(__bridge MPSCustomKernelImpl*)kernelID
         dropoutBwd:(id<MTLBuffer>)dstBufferID
         srcBuffer:(id<MTLBuffer>)srcBufferID
         mskBuffer:(id<MTLBuffer>)mskBufferID
         probability:probability
         withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
-}
-
-// CustomKernelSoftmax
-
-void* customKernelSoftmaxCreate(void *deviceID, const char *kernelSource) {
-    return [[KernelMTLBufferSoftmaxImpl alloc]
-        initWithDevice:(id<MTLDevice>)deviceID
-        kernelSource:[NSString stringWithUTF8String:kernelSource]];
-}
-
-void customKernelSoftmax(
-    void *kernelID,
-    void *commandBufferID,
-    void *destinationBufferID,
-    void *sourceBufferID,
-    void *sumOutBufferID,
-    uint colsCount,
-    uint rowsCount,
-    uint offset
-) {
-    [(__bridge KernelMTLBufferSoftmaxImpl*)kernelID
-        softmax:(id<MTLBuffer>)destinationBufferID
-        sourceBuffer:(id<MTLBuffer>)sourceBufferID
-        sumOutBuffer:(id<MTLBuffer>)sumOutBufferID
-        colsCount:colsCount
-        rowsCount:rowsCount
-        offset:offset
-        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
-}
-
-// customKernelSoftmaxFwdTrilFwd
-
-void* customKernelSoftmaxTrilFwdCreate(void *deviceID, const char *kernelSource) {
-    return [[KernelMTLBufferSoftmaxTrilImpl alloc]
-        initWithDevice:(id<MTLDevice>)deviceID
-        kernelSource:[NSString stringWithUTF8String:kernelSource]];
-}
-
-void customKernelSoftmaxTrilFwd(
-    void *kernelID,
-    void *commandBufferID,
-    void *destinationBufferID,
-    void *sourceBufferID,
-    uint colsCount,
-    uint rowsCount,
-    uint offset
-) {
-    [(__bridge KernelMTLBufferSoftmaxTrilImpl*)kernelID
-        softmaxTril:(id<MTLBuffer>)destinationBufferID
-        sourceBuffer:(id<MTLBuffer>)sourceBufferID
-        colsCount:colsCount
-        rowsCount:rowsCount
-        offset:offset
-        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
-}
-
-// customKernelSoftmaxFwdTrilBwd
-
-void* customKernelSoftmaxTrilBwdCreate(void *deviceID, const char *kernelSource) {
-    return [[KernelMTLBufferSoftmaxTrilBwdImpl alloc]
-        initWithDevice:(id<MTLDevice>)deviceID
-        kernelSource:[NSString stringWithUTF8String:kernelSource]];
-}
-
-void customKernelSoftmaxTrilBwd(
-    void *kernelID,
-    void *commandBufferID,
-    void *destinationBufferID,
-    void *sourceBufferID,
-    void *softmaxBufferID,
-    uint colsCount,
-    uint rowsCount,
-    uint offset
-) {
-    [(__bridge KernelMTLBufferSoftmaxTrilBwdImpl*)kernelID
-        softmaxTrilBwd:(id<MTLBuffer>)destinationBufferID
-        sourceBuffer:(id<MTLBuffer>)sourceBufferID
-        softmaxBuffer:(id<MTLBuffer>)softmaxBufferID
-        colsCount:colsCount
-        rowsCount:rowsCount
-        offset:offset
-        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
-}
-
-// customKernelUpdateWithAdam
-
-void* customKernelUpdateWithAdamCreate(void *deviceID, const char *kernelSource) {
-    return [[KernelMTLBufferUpdateWithAdamImpl alloc]
-        initWithDevice:(id<MTLDevice>)deviceID
-        kernelSource:[NSString stringWithUTF8String:kernelSource]];
 }
 
 void customKernelUpdateWithAdam(
@@ -281,14 +173,51 @@ void customKernelUpdateWithAdam(
     float beta1powIterationLR,
     float beta2powIteration
 ) {
-    [(__bridge KernelMTLBufferUpdateWithAdamImpl*)kernelID
-        updateWithAdam:(id<MTLBuffer>)dataBufferID
+    [(__bridge MPSCustomKernelImpl*)kernelID updateWithAdam:(id<MTLCommandBuffer>)commandBufferID
+        dataBuffer:(id<MTLBuffer>)dataBufferID
         gradBuffer:(id<MTLBuffer>)gradBufferID
         mBuffer:(id<MTLBuffer>)mBufferID
         vBuffer:(id<MTLBuffer>)vBufferID
         beta1:beta1
         beta2:beta2
         beta1powIterationLR:beta1powIterationLR
-        beta2powIteration:beta2powIteration
+        beta2powIteration:beta2powIteration];
+}
+
+void customKernelSoftmaxTrilFwd(
+    void *kernelID,
+    void *commandBufferID,
+    void *destinationBufferID,
+    void *sourceBufferID,
+    uint colsCount,
+    uint rowsCount,
+    uint offset
+) {
+    [(__bridge MPSCustomKernelImpl*)kernelID
+        softmaxTril:(id<MTLBuffer>)destinationBufferID
+        sourceBuffer:(id<MTLBuffer>)sourceBufferID
+        colsCount:colsCount
+        rowsCount:rowsCount
+        offset:offset
+        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
+}
+
+void customKernelSoftmaxTrilBwd(
+    void *kernelID,
+    void *commandBufferID,
+    void *destinationBufferID,
+    void *sourceBufferID,
+    void *softmaxBufferID,
+    uint colsCount,
+    uint rowsCount,
+    uint offset
+) {
+    [(__bridge MPSCustomKernelImpl*)kernelID
+        softmaxTrilBwd:(id<MTLBuffer>)destinationBufferID
+        sourceBuffer:(id<MTLBuffer>)sourceBufferID
+        softmaxBuffer:(id<MTLBuffer>)softmaxBufferID
+        colsCount:colsCount
+        rowsCount:rowsCount
+        offset:offset
         withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
 }

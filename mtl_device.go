@@ -25,39 +25,17 @@ type Releasable interface {
 func NewMTLDevice() *MTLDevice {
 	deviceID := mtlDeviceCreate()
 	device := &MTLDevice{
-		deviceID: deviceID,
-
-		krnFill:           customKernelFillCreate(deviceID),
-		krnCopy:           customKernelCopyCreate(deviceID),
-		krnReLUFwd:        customKernelReLUForwardCreate(deviceID),
-		krnReLUBwd:        customKernelReLUBackwardCreate(deviceID),
-		krnAdd:            customKernelAddCreate(deviceID),
-		krnMul:            customKernelMulCreate(deviceID),
-		krnDropout:        customKernelDropoutCreate(deviceID),
-		krnSoftmax:        customKernelSoftmaxForwardCreate(deviceID),
-		krnSoftmaxTrilFwd: customKernelSoftmaxTrilForwardCreate(deviceID),
-		krnSoftmaxTrilBwd: customKernelSoftmaxTrilBackwardCreate(deviceID),
-		krnUpdateWithAdam: customKernelUpdateWithAdamCreate(deviceID),
+		deviceID:      deviceID,
+		customKernels: customKernelsCreate(deviceID),
 	}
 
 	return device
 }
 
 type MTLDevice struct {
-	deviceID  unsafe.Pointer
-	resources []Releasable
-
-	krnFill           unsafe.Pointer
-	krnCopy           unsafe.Pointer
-	krnReLUFwd        unsafe.Pointer
-	krnReLUBwd        unsafe.Pointer
-	krnAdd            unsafe.Pointer
-	krnMul            unsafe.Pointer
-	krnDropout        unsafe.Pointer
-	krnSoftmax        unsafe.Pointer
-	krnSoftmaxTrilFwd unsafe.Pointer
-	krnSoftmaxTrilBwd unsafe.Pointer
-	krnUpdateWithAdam unsafe.Pointer
+	deviceID      unsafe.Pointer
+	resources     []Releasable
+	customKernels unsafe.Pointer
 }
 
 func (device *MTLDevice) CreateCommandQueue() *MTLCommandQueue {
