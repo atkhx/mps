@@ -68,7 +68,7 @@ struct Parameters {
 //                id<MTLComputePipelineState> _softmaxTrilBwdPSO;
 
         _softmaxTrilPSO = [self createPipelineStateWithFunctionName:@"softmaxTril"];
-        _softmaxTrilBwdPSO = [self createPipelineStateWithFunctionName:@"smxBufferTrilBwd"];
+        _softmaxTrilBwdPSO = [self createPipelineStateWithFunctionName:@"softmaxBufferTrilBwd"];
 
     }
     return self;
@@ -305,39 +305,39 @@ struct Parameters {
     [computeEncoder endEncoding];
 }
 
-- (void) softmaxTril:(id<MTLBuffer>)destinationBuffer
-        sourceBuffer:(id<MTLBuffer>)sourceBuffer
+- (void) softmaxTril:(id<MTLCommandBuffer>)commandBuffer
+        dstBuffer:(id<MTLBuffer>)dstBuffer
+        srcBuffer:(id<MTLBuffer>)srcBuffer
         colsCount:(uint)colsCount
         rowsCount:(uint)rowsCount
         offset:(uint)offset
-        withCommandBuffer:(id<MTLCommandBuffer>)commandBuffer {
-
-    id<MTLComputeCommandEncoder> computeEncoderSoftmaxTril = [commandBuffer computeCommandEncoder];
-    [computeEncoderSoftmaxTril setComputePipelineState:_softmaxTrilPSO];
-    [computeEncoderSoftmaxTril setBuffer:sourceBuffer offset:offset atIndex:0];
-    [computeEncoderSoftmaxTril setBuffer:destinationBuffer offset:offset atIndex:1];
-    [computeEncoderSoftmaxTril setBytes:&colsCount length:sizeof(uint) atIndex:2];
-    [computeEncoderSoftmaxTril dispatchThreads:MTLSizeMake(1, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
-    [computeEncoderSoftmaxTril endEncoding];
+{
+    id<MTLComputeCommandEncoder> computeEncoder = [commandBuffer computeCommandEncoder];
+    [computeEncoder setComputePipelineState:_softmaxTrilPSO];
+    [computeEncoder setBuffer:dstBuffer offset:offset atIndex:0];
+    [computeEncoder setBuffer:srcBuffer offset:offset atIndex:1];
+    [computeEncoder setBytes:&colsCount length:sizeof(uint) atIndex:2];
+    [computeEncoder dispatchThreads:MTLSizeMake(1, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [computeEncoder endEncoding];
 }
 
-- (void) softmaxTrilBwd:(id<MTLBuffer>)destinationBuffer
-        sourceBuffer:(id<MTLBuffer>)sourceBuffer
-        softmaxBuffer:(id<MTLBuffer>)softmaxBuffer
+- (void) softmaxTrilBwd:(id<MTLCommandBuffer>)commandBuffer
+        dstBuffer:(id<MTLBuffer>)dstBuffer
+        srcBuffer:(id<MTLBuffer>)srcBuffer
+        smxBuffer:(id<MTLBuffer>)smxBuffer
         colsCount:(uint)colsCount
         rowsCount:(uint)rowsCount
         offset:(uint)offset
-        withCommandBuffer:(id<MTLCommandBuffer>)commandBuffer {
+{
+    id<MTLComputeCommandEncoder> computeEncoder = [commandBuffer computeCommandEncoder];
 
-    id<MTLComputeCommandEncoder> computeEncoderSoftmaxTrilBwd = [commandBuffer computeCommandEncoder];
-
-    [computeEncoderSoftmaxTrilBwd setComputePipelineState:_softmaxTrilBwdPSO];
-    [computeEncoderSoftmaxTrilBwd setBuffer:sourceBuffer offset:offset atIndex:0];
-    [computeEncoderSoftmaxTrilBwd setBuffer:destinationBuffer offset:offset atIndex:1];
-    [computeEncoderSoftmaxTrilBwd setBuffer:softmaxBuffer offset:offset atIndex:2];
-    [computeEncoderSoftmaxTrilBwd setBytes:&colsCount length:sizeof(uint) atIndex:3];
-    [computeEncoderSoftmaxTrilBwd dispatchThreads:MTLSizeMake(1, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
-    [computeEncoderSoftmaxTrilBwd endEncoding];
+    [computeEncoder setComputePipelineState:_softmaxTrilBwdPSO];
+    [computeEncoder setBuffer:dstBuffer offset:offset atIndex:0];
+    [computeEncoder setBuffer:srcBuffer offset:offset atIndex:1];
+    [computeEncoder setBuffer:smxBuffer offset:offset atIndex:2];
+    [computeEncoder setBytes:&colsCount length:sizeof(uint) atIndex:3];
+    [computeEncoder dispatchThreads:MTLSizeMake(1, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [computeEncoder endEncoding];
 }
 
 @end

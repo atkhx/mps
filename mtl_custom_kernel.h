@@ -4,9 +4,7 @@
 
 #include "custom_kernel.h"
 
-// CustomKernels
-
-void* customKernelsCreate(void *deviceID, const char *kernelSource);
+void* customKernelCreate(void *deviceID, const char *kernelSource);
 
 void customKernelCopy(
     void *kernelID,
@@ -114,8 +112,8 @@ void customKernelUpdateWithAdam(
 void customKernelSoftmaxTrilFwd(
     void *kernelID,
     void *commandBufferID,
-    void *destinationBufferID,
-    void *sourceBufferID,
+    void *dstBufferID,
+    void *srcBufferID,
     uint colsCount,
     uint rowsCount,
     uint offset
@@ -124,9 +122,9 @@ void customKernelSoftmaxTrilFwd(
 void customKernelSoftmaxTrilBwd(
     void *kernelID,
     void *commandBufferID,
-    void *destinationBufferID,
-    void *sourceBufferID,
-    void *softmaxBufferID,
+    void *dstBufferID,
+    void *srcBufferID,
+    void *smxBufferID,
     uint colsCount,
     uint rowsCount,
     uint offset

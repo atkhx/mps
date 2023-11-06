@@ -26,7 +26,7 @@ func NewMTLDevice() *MTLDevice {
 	deviceID := mtlDeviceCreate()
 	device := &MTLDevice{
 		deviceID:      deviceID,
-		customKernels: customKernelsCreate(deviceID),
+		customKernels: customKernelCreate(deviceID),
 	}
 
 	return device

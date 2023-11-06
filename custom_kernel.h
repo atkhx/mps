@@ -103,20 +103,20 @@
         beta1powIterationLR:(float)beta1powIterationLR
         beta2powIteration:(float)beta2powIteration;
 
-- (void) softmaxTril:(id<MTLBuffer>)destinationBuffer
-        sourceBuffer:(id<MTLBuffer>)sourceBuffer
+- (void) softmaxTril:(id<MTLCommandBuffer>)commandBuffer
+        dstBuffer:(id<MTLBuffer>)dstBuffer
+        srcBuffer:(id<MTLBuffer>)srcBuffer
         colsCount:(uint)colsCount
         rowsCount:(uint)rowsCount
-        offset:(uint)offset
-        withCommandBuffer:(id<MTLCommandBuffer>)commandBuffer;
+        offset:(uint)offset;
 
-- (void) softmaxTrilBwd:(id<MTLBuffer>)destinationBuffer
-        sourceBuffer:(id<MTLBuffer>)sourceBuffer
-        softmaxBuffer:(id<MTLBuffer>)softmaxBuffer
+- (void) softmaxTrilBwd:(id<MTLCommandBuffer>)commandBuffer
+        dstBuffer:(id<MTLBuffer>)dstBuffer
+        srcBuffer:(id<MTLBuffer>)srcBuffer
+        smxBuffer:(id<MTLBuffer>)smxBuffer
         colsCount:(uint)colsCount
         rowsCount:(uint)rowsCount
-        offset:(uint)offset
-        withCommandBuffer:(id<MTLCommandBuffer>)commandBuffer;
+        offset:(uint)offset;
 
 @end
 

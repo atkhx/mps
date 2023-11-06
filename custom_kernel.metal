@@ -148,8 +148,8 @@ kernel void updateWithAdam(
 }
 
 kernel void softmaxTril(
-    device float *srcBuffer [[ buffer(0) ]],
-    device float *dstBuffer [[ buffer(1) ]],
+    device float *dstBuffer [[ buffer(0) ]],
+    device float *srcBuffer [[ buffer(1) ]],
     constant uint& width [[ buffer(2) ]],
     const uint2 gid [[ thread_position_in_grid ]] )
 {
@@ -174,9 +174,9 @@ kernel void softmaxTril(
     }
 }
 
-kernel void smxBufferTrilBwd(
-    device float *srcBuffer [[ buffer(0) ]],
-    device float *dstBuffer [[ buffer(1) ]],
+kernel void softmaxBufferTrilBwd(
+    device float *dstBuffer [[ buffer(0) ]],
+    device float *srcBuffer [[ buffer(1) ]],
     device float *smxBuffer [[ buffer(2) ]],
     constant uint& width [[ buffer(3) ]],
     const uint2 gid [[ thread_position_in_grid ]] )

@@ -3,7 +3,7 @@ package mps
 /*
 #cgo CFLAGS: -x objective-c
 #cgo LDFLAGS: -framework Metal -framework MetalPerformanceShaders -framework CoreGraphics -framework Foundation
-#include "mtl_custom_kernels.h"
+#include "mtl_custom_kernel.h"
 */
 import "C"
 import (
@@ -12,12 +12,12 @@ import (
 )
 
 //go:embed custom_kernel.metal
-var kernels string
+var customKernelFunctions string
 
-func customKernelsCreate(deviceID unsafe.Pointer) unsafe.Pointer {
-	cKernelString := C.CString(kernels)
+func customKernelCreate(deviceID unsafe.Pointer) unsafe.Pointer {
+	cKernelString := C.CString(customKernelFunctions)
 	defer C.free(unsafe.Pointer(cKernelString))
-	return C.customKernelsCreate(deviceID, cKernelString)
+	return C.customKernelCreate(deviceID, cKernelString)
 }
 
 func customKernelCopy(kernelID, commandBufferID, dstBufferID, srcBufferID unsafe.Pointer, dstOffset, srcOffset, length int) {

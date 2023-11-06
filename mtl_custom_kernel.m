@@ -1,8 +1,6 @@
-#include "mtl_custom_kernels.h"
+#include "mtl_custom_kernel.h"
 
-// CustomKernels
-
-void* customKernelsCreate(void *deviceID, const char *kernelSource) {
+void* customKernelCreate(void *deviceID, const char *kernelSource) {
     return [[MPSCustomKernelImpl alloc]
         initWithDevice:(id<MTLDevice>)deviceID
         kernelSource:[NSString stringWithUTF8String:kernelSource]];
@@ -187,37 +185,35 @@ void customKernelUpdateWithAdam(
 void customKernelSoftmaxTrilFwd(
     void *kernelID,
     void *commandBufferID,
-    void *destinationBufferID,
-    void *sourceBufferID,
+    void *dstBufferID,
+    void *srcBufferID,
     uint colsCount,
     uint rowsCount,
     uint offset
 ) {
-    [(__bridge MPSCustomKernelImpl*)kernelID
-        softmaxTril:(id<MTLBuffer>)destinationBufferID
-        sourceBuffer:(id<MTLBuffer>)sourceBufferID
+    [(__bridge MPSCustomKernelImpl*)kernelID softmaxTril:(id<MTLCommandBuffer>)commandBufferID
+        dstBuffer:(id<MTLBuffer>)dstBufferID
+        srcBuffer:(id<MTLBuffer>)srcBufferID
         colsCount:colsCount
         rowsCount:rowsCount
-        offset:offset
-        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
+        offset:offset];
 }
 
 void customKernelSoftmaxTrilBwd(
     void *kernelID,
     void *commandBufferID,
-    void *destinationBufferID,
-    void *sourceBufferID,
-    void *softmaxBufferID,
+    void *dstBufferID,
+    void *srcBufferID,
+    void *smxBufferID,
     uint colsCount,
     uint rowsCount,
     uint offset
 ) {
-    [(__bridge MPSCustomKernelImpl*)kernelID
-        softmaxTrilBwd:(id<MTLBuffer>)destinationBufferID
-        sourceBuffer:(id<MTLBuffer>)sourceBufferID
-        softmaxBuffer:(id<MTLBuffer>)softmaxBufferID
+    [(__bridge MPSCustomKernelImpl*)kernelID softmaxTrilBwd:(id<MTLCommandBuffer>)commandBufferID
+        dstBuffer:(id<MTLBuffer>)dstBufferID
+        srcBuffer:(id<MTLBuffer>)srcBufferID
+        smxBuffer:(id<MTLBuffer>)smxBufferID
         colsCount:colsCount
         rowsCount:rowsCount
-        offset:offset
-        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
+        offset:offset];
 }
