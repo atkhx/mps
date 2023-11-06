@@ -64,12 +64,9 @@ struct Parameters {
         _expPSO = [self createPipelineStateWithFunctionName:@"exp"];
         _sumPSO = [self createPipelineStateWithFunctionName:@"sum"];
         _divOnSumPSO = [self createPipelineStateWithFunctionName:@"divOnSum"];
-        //     id<MTLComputePipelineState> _softmaxTrilPSO;
-//                id<MTLComputePipelineState> _softmaxTrilBwdPSO;
 
         _softmaxTrilPSO = [self createPipelineStateWithFunctionName:@"softmaxTril"];
         _softmaxTrilBwdPSO = [self createPipelineStateWithFunctionName:@"softmaxBufferTrilBwd"];
-
     }
     return self;
 }
