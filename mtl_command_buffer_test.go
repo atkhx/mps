@@ -348,30 +348,41 @@ func TestMTLCommandBuffer_SoftmaxBuffer(t *testing.T) {
 	colsCount := 3
 	rowsCount := 3
 
-	offset := 3
-	offsetEnd := 3
+	totalLength := colsCount * rowsCount
 
-	totalLength := offset + (colsCount * rowsCount) + offsetEnd
-
-	destinationBuffer := device.CreateNewBufferWithLength(totalLength)
+	//destinationBuffer := device.CreateNewBufferWithLength(totalLength)
+	destinationBuffer := device.CreateNewBufferWithLength(colsCount)
 	defer destinationBuffer.Release()
 
 	sourceBuffer := device.CreateNewBufferWithLength(totalLength)
 	defer sourceBuffer.Release()
 
+	softmaxBuffer := device.CreateNewBufferWithLength(totalLength)
+	defer softmaxBuffer.Release()
+
 	sumOutBuffer := device.CreateNewBufferWithLength(rowsCount)
 	defer sumOutBuffer.Release()
 
-	for i := offset; i < len(destinationBuffer.GetData())-offsetEnd; i++ {
+	tgtBuffer := device.CreateNewBufferWithLength(rowsCount)
+	defer tgtBuffer.Release()
+
+	tgtBuffer.GetData()[0] = 1
+	tgtBuffer.GetData()[1] = 0
+	tgtBuffer.GetData()[2] = 2
+
+	for i := 0; i < len(sourceBuffer.GetData()); i++ {
 		sourceBuffer.GetData()[i] = rand.Float32()
 	}
 
-	commandBuffer.SoftmaxBuffer(destinationBuffer, sourceBuffer, sumOutBuffer, colsCount, rowsCount, offset)
+	fmt.Println("src:", sourceBuffer.GetData())
+	//commandBuffer.SoftmaxBuffer(destinationBuffer, sourceBuffer, sumOutBuffer, colsCount, rowsCount, 0)
+	commandBuffer.CrossEntropyPos(destinationBuffer, sourceBuffer, softmaxBuffer, sumOutBuffer, tgtBuffer, colsCount)
 	commandBuffer.Wait()
 
-	fmt.Println(sourceBuffer.GetData())
-	fmt.Println(sumOutBuffer.GetData())
-	fmt.Println(destinationBuffer.GetData())
+	fmt.Println("src:", sourceBuffer.GetData())
+	fmt.Println("sum:", sumOutBuffer.GetData())
+	fmt.Println("smx:", softmaxBuffer.GetData())
+	fmt.Println("dst:", destinationBuffer.GetData())
 }
 
 func TestMTLCommandBuffer_SoftmaxBufferTril(t *testing.T) {

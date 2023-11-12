@@ -39,6 +39,14 @@ kernel void addTo(
     dstBuffer[id] = aBuffer[id] + bBuffer[id];
 }
 
+kernel void addScalar(
+    device float *dstBuffer [[ buffer(0) ]],
+    constant float& value [[ buffer(1) ]],
+    const uint id [[ thread_position_in_grid ]] )
+{
+    dstBuffer[id] += value;
+}
+
 kernel void mul(
     device float *dstBuffer [[ buffer(0) ]],
     device float *srcBuffer [[ buffer(1) ]],
@@ -47,13 +55,32 @@ kernel void mul(
     dstBuffer[id] *= srcBuffer[id];
 }
 
-kernel void divOnSum(
-    device float *dstBuffer [[ buffer(0) ]],
-    device float *sumBuffer [[ buffer(1) ]],
+kernel void maxByRow(
+    device float *srcBuffer [[ buffer(0) ]],
+    device float *dstBuffer [[ buffer(1) ]],
     constant uint& width [[ buffer(2) ]],
     const uint2 gid [[ thread_position_in_grid ]] )
 {
-    dstBuffer[gid.y * width+gid.x] /= sumBuffer[gid.y];
+    uint startIdx = gid.y * width;
+    uint endIdx = startIdx + width;
+
+    float maxValue = srcBuffer[startIdx];
+    for (uint i = startIdx+1; i < endIdx; ++i) {
+        if (maxValue < srcBuffer[i]) {
+            maxValue = srcBuffer[i];
+        }
+    }
+
+    dstBuffer[gid.y] = maxValue;
+}
+
+kernel void subMaxByRow(
+    device float *dstBuffer [[ buffer(0) ]],
+    device float *maxBuffer [[ buffer(1) ]],
+    constant uint& width [[ buffer(2) ]],
+    const uint2 gid [[ thread_position_in_grid ]] )
+{
+    dstBuffer[gid.y * width+gid.x] -= maxBuffer[gid.y];
 }
 
 kernel void exp(
@@ -64,7 +91,7 @@ kernel void exp(
     destinationBuffer[id] = exp(sourceBuffer[id]);
 }
 
-kernel void sum(
+kernel void sumByRow(
     device float *srcBuffer [[ buffer(0) ]],
     device float *dstBuffer [[ buffer(1) ]],
     constant uint& width [[ buffer(2) ]],
@@ -79,6 +106,26 @@ kernel void sum(
     }
 
     dstBuffer[gid.y] = sumValue;
+}
+
+kernel void nllByPos(
+    device float *dstBuffer [[ buffer(0) ]],
+    device float *smxBuffer [[ buffer(1) ]],
+    device float *tgtBuffer [[ buffer(2) ]],
+    constant uint& width [[ buffer(3) ]],
+    const uint id [[ thread_position_in_grid ]] )
+{
+    dstBuffer[id] = -log(smxBuffer[id * width + int(tgtBuffer[id])]);
+}
+
+kernel void divOnSum(
+    device float *srcBuffer [[ buffer(0) ]],
+    device float *dstBuffer [[ buffer(1) ]],
+    device float *sumBuffer [[ buffer(2) ]],
+    constant uint& width [[ buffer(3) ]],
+    const uint2 gid [[ thread_position_in_grid ]] )
+{
+    dstBuffer[gid.y * width+gid.x] = srcBuffer[gid.y * width+gid.x] / sumBuffer[gid.y];
 }
 
 kernel void relu(
@@ -196,4 +243,36 @@ kernel void softmaxBufferTrilBwd(
     for (uint i = startIdx; i < endIdx; ++i) {
         dstBuffer[i] -= smxBuffer[i] * s;
     }
+}
+
+kernel void crossEntropyPosBwd(
+    device float *oGrad [[ buffer(0) ]],
+    device float *aGrad [[ buffer(1) ]],
+    device float *tgtBuffer [[ buffer(2) ]],
+    device float *smxBuffer [[ buffer(3) ]],
+    constant uint& chunkSize [[ buffer(4) ]],
+    const uint id [[ thread_position_in_grid ]] )
+{
+    int rowIdx = id / chunkSize;
+    float softmaxI = smxBuffer[id];
+    int tgtIndex = tgtBuffer[rowIdx];
+
+    if (id == tgtIndex + (rowIdx * chunkSize)) {
+        aGrad[id] += oGrad[rowIdx] * (softmaxI - 1);
+    } else {
+        aGrad[id] += oGrad[rowIdx] * softmaxI;
+    }
+}
+
+kernel void sqsByRow(
+    device float *srcBuffer [[ buffer(0) ]],
+    device float *dstBuffer [[ buffer(1) ]],
+    constant uint& width [[ buffer(2) ]],
+    const uint2 gid [[ thread_position_in_grid ]] )
+{
+    float val = 0.0;
+    for (uint i = gid.y*width; i < (gid.y+1)*width; ++i) {
+        val += srcBuffer[i] * srcBuffer[i];
+    }
+    dstBuffer[gid.y] = sqrt(1e-5 + (val/float(width)));
 }

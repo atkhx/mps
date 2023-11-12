@@ -12,10 +12,16 @@ struct Parameters {
     id<MTLComputePipelineState> _fillPSO;
     id<MTLComputePipelineState> _addPSO;
     id<MTLComputePipelineState> _addToPSO;
+    id<MTLComputePipelineState> _addScalarPSO;
     id<MTLComputePipelineState> _mulPSO;
+    id<MTLComputePipelineState> _subMaxByRowPSO;
     id<MTLComputePipelineState> _divOnSumPSO;
     id<MTLComputePipelineState> _expPSO;
-    id<MTLComputePipelineState> _sumPSO;
+    id<MTLComputePipelineState> _maxByRowPSO;
+    id<MTLComputePipelineState> _sumByRowPSO;
+    id<MTLComputePipelineState> _sqsByRowPSO;
+    id<MTLComputePipelineState> _nllByPosPSO;
+    id<MTLComputePipelineState> _crossEntropyPosBwdPOS;
     id<MTLComputePipelineState> _reluPSO;
     id<MTLComputePipelineState> _reluBwdPSO;
     id<MTLComputePipelineState> _dropoutPSO;
@@ -54,6 +60,7 @@ struct Parameters {
         _fillPSO = [self createPipelineStateWithFunctionName:@"fill"];
         _addPSO = [self createPipelineStateWithFunctionName:@"add"];
         _addToPSO = [self createPipelineStateWithFunctionName:@"addTo"];
+        _addScalarPSO = [self createPipelineStateWithFunctionName:@"addScalar"];
         _mulPSO = [self createPipelineStateWithFunctionName:@"mul"];
         _reluPSO = [self createPipelineStateWithFunctionName:@"relu"];
         _reluBwdPSO = [self createPipelineStateWithFunctionName:@"reluBwd"];
@@ -62,8 +69,14 @@ struct Parameters {
         _updateWithAdamPSO = [self createPipelineStateWithFunctionName:@"updateWithAdam"];
 
         _expPSO = [self createPipelineStateWithFunctionName:@"exp"];
-        _sumPSO = [self createPipelineStateWithFunctionName:@"sum"];
+        _sumByRowPSO = [self createPipelineStateWithFunctionName:@"sumByRow"];
+        _sqsByRowPSO = [self createPipelineStateWithFunctionName:@"sqsByRow"];
+        _nllByPosPSO = [self createPipelineStateWithFunctionName:@"nllByPos"];
+        _maxByRowPSO = [self createPipelineStateWithFunctionName:@"maxByRow"];
         _divOnSumPSO = [self createPipelineStateWithFunctionName:@"divOnSum"];
+        _subMaxByRowPSO = [self createPipelineStateWithFunctionName:@"subMaxByRow"];
+
+        _crossEntropyPosBwdPOS = [self createPipelineStateWithFunctionName:@"crossEntropyPosBwd"];
 
         _softmaxTrilPSO = [self createPipelineStateWithFunctionName:@"softmaxTril"];
         _softmaxTrilBwdPSO = [self createPipelineStateWithFunctionName:@"softmaxBufferTrilBwd"];
@@ -83,7 +96,7 @@ struct Parameters {
     [computeEncoder setComputePipelineState:_copyPSO];
     [computeEncoder setBuffer:dstBuffer offset:dstOffset atIndex:0];
     [computeEncoder setBuffer:srcBuffer offset:srcOffset atIndex:1];
-    [computeEncoder dispatchThreads:MTLSizeMake(length / 4, 1, 1) threadsPerThreadgroup:MTLSizeMake(256, 1, 1)];
+    [computeEncoder dispatchThreads:MTLSizeMake(length / 4, 1, 1) threadsPerThreadgroup:MTLSizeMake(512, 1, 1)];
     [computeEncoder endEncoding];
 }
 
@@ -129,6 +142,19 @@ struct Parameters {
     [computeEncoder setBuffer:dstBuffer offset:0 atIndex:0];
     [computeEncoder setBuffer:aBuffer offset:0 atIndex:1];
     [computeEncoder setBuffer:bBuffer offset:0 atIndex:2];
+    [computeEncoder dispatchThreads:MTLSizeMake(dstBuffer.length / 4, 1, 1) threadsPerThreadgroup:MTLSizeMake(256, 1, 1)];
+    [computeEncoder endEncoding];
+}
+
+- (void) addScalar:(id<MTLCommandBuffer>)commandBuffer
+        dstBuffer:(id<MTLBuffer>)dstBuffer
+        value:(float)value
+{
+    id<MTLComputeCommandEncoder> computeEncoder = [commandBuffer computeCommandEncoder];
+
+    [computeEncoder setComputePipelineState:_addScalarPSO];
+    [computeEncoder setBuffer:dstBuffer offset:0 atIndex:0];
+    [computeEncoder setBytes:&value length:sizeof(float) atIndex:1];
     [computeEncoder dispatchThreads:MTLSizeMake(dstBuffer.length / 4, 1, 1) threadsPerThreadgroup:MTLSizeMake(256, 1, 1)];
     [computeEncoder endEncoding];
 }
@@ -193,7 +219,7 @@ struct Parameters {
     [computeEncoder endEncoding];
 }
 
-- (void) sum:(id<MTLCommandBuffer>)commandBuffer
+- (void) maxByRow:(id<MTLCommandBuffer>)commandBuffer
         dstBuffer:(id<MTLBuffer>)dstBuffer
         srcBuffer:(id<MTLBuffer>)srcBuffer
         colsCount:(uint)colsCount
@@ -201,7 +227,7 @@ struct Parameters {
         offset:(uint)offset
 {
     id<MTLComputeCommandEncoder> computeEncoder = [commandBuffer computeCommandEncoder];
-    [computeEncoder setComputePipelineState:_sumPSO];
+    [computeEncoder setComputePipelineState:_maxByRowPSO];
     [computeEncoder setBuffer:srcBuffer offset:offset atIndex:0];
     [computeEncoder setBuffer:dstBuffer offset:0 atIndex:1];
     [computeEncoder setBytes:&colsCount length:sizeof(uint) atIndex:2];
@@ -209,18 +235,52 @@ struct Parameters {
     [computeEncoder endEncoding];
 }
 
-- (void) divOnSum:(id<MTLCommandBuffer>)commandBuffer
+- (void) subMaxByRow:(id<MTLCommandBuffer>)commandBuffer
         dstBuffer:(id<MTLBuffer>)dstBuffer
-        sumBuffer:(id<MTLBuffer>)sumBuffer
+        maxBuffer:(id<MTLBuffer>)maxBuffer
         colsCount:(uint)colsCount
         rowsCount:(uint)rowsCount
         offset:(uint)offset
 {
     id<MTLComputeCommandEncoder> computeEncoder = [commandBuffer computeCommandEncoder];
-    [computeEncoder setComputePipelineState:_divOnSumPSO];
+    [computeEncoder setComputePipelineState:_subMaxByRowPSO];
     [computeEncoder setBuffer:dstBuffer offset:offset atIndex:0];
-    [computeEncoder setBuffer:sumBuffer offset:0 atIndex:1];
+    [computeEncoder setBuffer:maxBuffer offset:0 atIndex:1];
     [computeEncoder setBytes:&colsCount length:sizeof(uint) atIndex:2];
+    [computeEncoder dispatchThreads:MTLSizeMake(colsCount, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(256, 1, 1)];
+    [computeEncoder endEncoding];
+}
+
+- (void) sumByRow:(id<MTLCommandBuffer>)commandBuffer
+        dstBuffer:(id<MTLBuffer>)dstBuffer
+        srcBuffer:(id<MTLBuffer>)srcBuffer
+        colsCount:(uint)colsCount
+        rowsCount:(uint)rowsCount
+        offset:(uint)offset
+{
+    id<MTLComputeCommandEncoder> computeEncoder = [commandBuffer computeCommandEncoder];
+    [computeEncoder setComputePipelineState:_sumByRowPSO];
+    [computeEncoder setBuffer:srcBuffer offset:offset atIndex:0];
+    [computeEncoder setBuffer:dstBuffer offset:0 atIndex:1];
+    [computeEncoder setBytes:&colsCount length:sizeof(uint) atIndex:2];
+    [computeEncoder dispatchThreads:MTLSizeMake(1, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+//     [computeEncoder dispatchThreads:MTLSizeMake(colsCount, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [computeEncoder endEncoding];
+}
+
+- (void) divOnSum:(id<MTLCommandBuffer>)commandBuffer
+        srcBuffer:(id<MTLBuffer>)srcBuffer
+        dstBuffer:(id<MTLBuffer>)dstBuffer
+        sumBuffer:(id<MTLBuffer>)sumBuffer
+        colsCount:(uint)colsCount
+        rowsCount:(uint)rowsCount
+{
+    id<MTLComputeCommandEncoder> computeEncoder = [commandBuffer computeCommandEncoder];
+    [computeEncoder setComputePipelineState:_divOnSumPSO];
+    [computeEncoder setBuffer:srcBuffer offset:0 atIndex:0];
+    [computeEncoder setBuffer:dstBuffer offset:0 atIndex:1];
+    [computeEncoder setBuffer:sumBuffer offset:0 atIndex:2];
+    [computeEncoder setBytes:&colsCount length:sizeof(uint) atIndex:3];
     [computeEncoder dispatchThreads:MTLSizeMake(colsCount, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(256, 1, 1)];
     [computeEncoder endEncoding];
 }
@@ -233,14 +293,100 @@ struct Parameters {
         rowsCount:(uint)rowsCount
         offset:(uint)offset
 {
-    [self exp:commandBuffer
-        dstBuffer:dstBuffer srcBuffer:srcBuffer colsCount:colsCount rowsCount:rowsCount offset:offset];
+    [self maxByRow:commandBuffer
+        dstBuffer:sumBuffer
+        srcBuffer:srcBuffer
+        colsCount:colsCount
+        rowsCount:rowsCount
+        offset:offset];
 
-    [self sum:commandBuffer
-        dstBuffer:sumBuffer srcBuffer:dstBuffer colsCount:colsCount rowsCount:rowsCount offset:offset];
+    [self subMaxByRow:commandBuffer
+        dstBuffer:srcBuffer
+        maxBuffer:sumBuffer
+        colsCount:colsCount
+        rowsCount:rowsCount
+        offset:offset];
+
+    [self exp:commandBuffer
+        dstBuffer:dstBuffer
+        srcBuffer:srcBuffer
+        colsCount:colsCount
+        rowsCount:rowsCount
+        offset:offset];
+
+    [self sumByRow:commandBuffer
+        dstBuffer:sumBuffer
+        srcBuffer:dstBuffer
+        colsCount:colsCount
+        rowsCount:rowsCount
+        offset:offset];
 
     [self divOnSum:commandBuffer
-        dstBuffer:dstBuffer sumBuffer:sumBuffer colsCount:colsCount rowsCount:rowsCount offset:offset];
+        srcBuffer:dstBuffer
+        dstBuffer:dstBuffer
+        sumBuffer:sumBuffer
+        colsCount:colsCount
+        rowsCount:rowsCount];
+}
+
+- (void) nllByPos:(id<MTLCommandBuffer>)commandBuffer
+        dstBuffer:(id<MTLBuffer>)dstBuffer
+        smxBuffer:(id<MTLBuffer>)smxBuffer
+        tgtBuffer:(id<MTLBuffer>)tgtBuffer
+        chunkSize:(uint)chunkSize
+{
+    id<MTLComputeCommandEncoder> computeEncoder = [commandBuffer computeCommandEncoder];
+    [computeEncoder setComputePipelineState:_nllByPosPSO];
+    [computeEncoder setBuffer:dstBuffer offset:0 atIndex:0];
+    [computeEncoder setBuffer:smxBuffer offset:0 atIndex:1];
+    [computeEncoder setBuffer:tgtBuffer offset:0 atIndex:2];
+    [computeEncoder setBytes:&chunkSize length:sizeof(uint) atIndex:3];
+    [computeEncoder dispatchThreads:MTLSizeMake(tgtBuffer.length/4, 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [computeEncoder endEncoding];
+}
+
+- (void) crossEntropyPos:(id<MTLCommandBuffer>)commandBuffer
+        dstBuffer:(id<MTLBuffer>)dstBuffer
+        srcBuffer:(id<MTLBuffer>)srcBuffer
+        smxBuffer:(id<MTLBuffer>)smxBuffer
+        sumBuffer:(id<MTLBuffer>)sumBuffer
+        tgtBuffer:(id<MTLBuffer>)tgtBuffer
+        chunkSize:(uint)chunkSize
+{
+    [self softmax:commandBuffer
+        dstBuffer:smxBuffer
+        srcBuffer:srcBuffer
+        sumBuffer:sumBuffer
+        colsCount:chunkSize
+        rowsCount:srcBuffer.length / (chunkSize*4)
+        offset:0
+    ];
+
+    [self nllByPos:commandBuffer
+        dstBuffer:dstBuffer
+        smxBuffer:smxBuffer
+        tgtBuffer:tgtBuffer
+        chunkSize:chunkSize
+    ];
+}
+
+- (void) crossEntropyPosBwd:(id<MTLCommandBuffer>)commandBuffer
+        oGrad:(id<MTLBuffer>)oGrad
+        aGrad:(id<MTLBuffer>)aGrad
+        tgtBuffer:(id<MTLBuffer>)tgtBuffer
+        smxBuffer:(id<MTLBuffer>)smxBuffer
+        chunkSize:(uint)chunkSize
+{
+    id<MTLComputeCommandEncoder> computeEncoder = [commandBuffer computeCommandEncoder];
+        [computeEncoder setComputePipelineState:_crossEntropyPosBwdPOS];
+        [computeEncoder setBuffer:oGrad offset:0 atIndex:0];
+        [computeEncoder setBuffer:aGrad offset:0 atIndex:1];
+        [computeEncoder setBuffer:tgtBuffer offset:0 atIndex:2];
+        [computeEncoder setBuffer:smxBuffer offset:0 atIndex:3];
+        [computeEncoder setBytes:&chunkSize length:sizeof(uint) atIndex:4];
+//         [computeEncoder dispatchThreads:MTLSizeMake(oGrad.length/4, 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+        [computeEncoder dispatchThreads:MTLSizeMake(aGrad.length/4, 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+        [computeEncoder endEncoding];
 }
 
 - (void) dropout:(id<MTLCommandBuffer>)commandBuffer
@@ -335,6 +481,41 @@ struct Parameters {
     [computeEncoder setBytes:&colsCount length:sizeof(uint) atIndex:3];
     [computeEncoder dispatchThreads:MTLSizeMake(1, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
     [computeEncoder endEncoding];
+}
+
+- (void) sqsByRow:(id<MTLCommandBuffer>)commandBuffer
+        dstBuffer:(id<MTLBuffer>)dstBuffer
+        srcBuffer:(id<MTLBuffer>)srcBuffer
+        colsCount:(uint)colsCount
+        rowsCount:(uint)rowsCount
+{
+    id<MTLComputeCommandEncoder> computeEncoder = [commandBuffer computeCommandEncoder];
+    [computeEncoder setComputePipelineState:_sqsByRowPSO];
+    [computeEncoder setBuffer:srcBuffer offset:0 atIndex:0];
+    [computeEncoder setBuffer:dstBuffer offset:0 atIndex:1];
+    [computeEncoder setBytes:&colsCount length:sizeof(uint) atIndex:2];
+    [computeEncoder dispatchThreads:MTLSizeMake(1, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [computeEncoder endEncoding];
+}
+
+- (void) rmsNorm:(id<MTLCommandBuffer>)commandBuffer
+        dstBuffer:(id<MTLBuffer>)dstBuffer
+        srcBuffer:(id<MTLBuffer>)srcBuffer
+        sumBuffer:(id<MTLBuffer>)sumBuffer
+        chunkSize:(uint)chunkSize
+{
+    [self sqsByRow:commandBuffer
+        dstBuffer:sumBuffer
+        srcBuffer:srcBuffer
+        colsCount:chunkSize
+        rowsCount:srcBuffer.length / (4 * chunkSize)];
+
+    [self divOnSum:commandBuffer
+        srcBuffer:srcBuffer
+        dstBuffer:dstBuffer
+        sumBuffer:sumBuffer
+        colsCount:chunkSize
+        rowsCount:srcBuffer.length / (4 * chunkSize)];
 }
 
 @end

@@ -96,6 +96,12 @@ func (b *MTLCommandBuffer) AddTo(dst, aBuffer, bBuffer *MTLBuffer) {
 	})
 }
 
+func (b *MTLCommandBuffer) AddScalar(dst *MTLBuffer, value float32) {
+	b.exclusive(func() {
+		customKernelAddScalar(b.device.customKernels, b.id, dst.bufferID, value)
+	})
+}
+
 func (b *MTLCommandBuffer) Mul(dst, src *MTLBuffer, dstOffset, srcOffset, length int) {
 	b.exclusive(func() {
 		customKernelMul(b.device.customKernels, b.id, dst.bufferID, src.bufferID, dstOffset, srcOffset, length)
@@ -232,6 +238,66 @@ func (b *MTLCommandBuffer) SoftmaxBufferTrilBwd(
 			colsCount,
 			rowsCount,
 			offset,
+		)
+	})
+}
+
+func (b *MTLCommandBuffer) CrossEntropyPos(
+	dstBuffer *MTLBuffer,
+	srcBuffer *MTLBuffer,
+	smxBuffer *MTLBuffer,
+	sumBuffer *MTLBuffer,
+	tgtBuffer *MTLBuffer,
+	chunkSize int,
+) {
+	b.exclusive(func() {
+		customKernelCrossEntropyPos(
+			b.device.customKernels,
+			b.id,
+			dstBuffer.bufferID,
+			srcBuffer.bufferID,
+			smxBuffer.bufferID,
+			sumBuffer.bufferID,
+			tgtBuffer.bufferID,
+			chunkSize,
+		)
+	})
+}
+
+func (b *MTLCommandBuffer) CrossEntropyPosBwd(
+	oGrad *MTLBuffer,
+	aGrad *MTLBuffer,
+	tgtBuffer *MTLBuffer,
+	smxBuffer *MTLBuffer,
+	chunkSize int,
+) {
+	b.exclusive(func() {
+		customKernelCrossEntropyPosBwd(
+			b.device.customKernels,
+			b.id,
+			oGrad.bufferID,
+			aGrad.bufferID,
+			tgtBuffer.bufferID,
+			smxBuffer.bufferID,
+			chunkSize,
+		)
+	})
+}
+
+func (b *MTLCommandBuffer) RMSNorm(
+	dstBuffer *MTLBuffer,
+	srcBuffer *MTLBuffer,
+	sumBuffer *MTLBuffer,
+	chunkSize int,
+) {
+	b.exclusive(func() {
+		customKernelRMSNorm(
+			b.device.customKernels,
+			b.id,
+			dstBuffer.bufferID,
+			srcBuffer.bufferID,
+			sumBuffer.bufferID,
+			chunkSize,
 		)
 	})
 }

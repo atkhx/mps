@@ -68,6 +68,17 @@ void customKernelAddTo(
         bBuffer:(id<MTLBuffer>)bBuffer];
 }
 
+void customKernelAddScalar(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    float value
+) {
+    [(__bridge MPSCustomKernelImpl*)kernelID addScalar:(id<MTLCommandBuffer>)commandBufferID
+        dstBuffer:(id<MTLBuffer>)dstBufferID
+        value:value];
+}
+
 void customKernelMul(
     void *kernelID,
     void *commandBufferID,
@@ -217,3 +228,55 @@ void customKernelSoftmaxTrilBwd(
         rowsCount:rowsCount
         offset:offset];
 }
+
+void customKernelCrossEntropyPos(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    void *srcBufferID,
+    void *smxBufferID,
+    void *sumBufferID,
+    void *tgtBufferID,
+    uint chunkSize
+) {
+    [(__bridge MPSCustomKernelImpl*)kernelID crossEntropyPos:(id<MTLCommandBuffer>)commandBufferID
+        dstBuffer:(id<MTLBuffer>)dstBufferID
+        srcBuffer:(id<MTLBuffer>)srcBufferID
+        smxBuffer:(id<MTLBuffer>)smxBufferID
+        sumBuffer:(id<MTLBuffer>)sumBufferID
+        tgtBuffer:(id<MTLBuffer>)tgtBufferID
+        chunkSize:chunkSize];
+}
+
+void customKernelCrossEntropyPosBwd(
+    void *kernelID,
+    void *commandBufferID,
+    void *oGradBufferID,
+    void *aGradBufferID,
+    void *tgtBufferID,
+    void *smxBufferID,
+    uint chunkSize
+) {
+    [(__bridge MPSCustomKernelImpl*)kernelID crossEntropyPosBwd:(id<MTLCommandBuffer>)commandBufferID
+        oGrad:(id<MTLBuffer>)oGradBufferID
+        aGrad:(id<MTLBuffer>)aGradBufferID
+        tgtBuffer:(id<MTLBuffer>)tgtBufferID
+        smxBuffer:(id<MTLBuffer>)smxBufferID
+        chunkSize:chunkSize];
+}
+
+void customKernelRMSNorm(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    void *srcBufferID,
+    void *sumBufferID,
+    uint chunkSize
+) {
+    [(__bridge MPSCustomKernelImpl*)kernelID rmsNorm:(id<MTLCommandBuffer>)commandBufferID
+        dstBuffer:(id<MTLBuffer>)dstBufferID
+        srcBuffer:(id<MTLBuffer>)srcBufferID
+        sumBuffer:(id<MTLBuffer>)sumBufferID
+        chunkSize:chunkSize];
+}
+

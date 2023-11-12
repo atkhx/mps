@@ -36,6 +36,10 @@ func customKernelAddTo(kernelID, commandBufferID, dstBufferID, aBuffer, bBuffer 
 	C.customKernelAddTo(kernelID, commandBufferID, dstBufferID, aBuffer, bBuffer)
 }
 
+func customKernelAddScalar(kernelID, commandBufferID, dstBufferID unsafe.Pointer, value float32) {
+	C.customKernelAddScalar(kernelID, commandBufferID, dstBufferID, C.float(value))
+}
+
 func customKernelMul(kernelID, commandBufferID, dstBufferID, srcBufferID unsafe.Pointer, dstOffset, srcOffset, length int) {
 	C.customKernelMul(kernelID, commandBufferID, dstBufferID, srcBufferID, C.uint(dstOffset*4), C.uint(srcOffset*4), C.uint(length*4))
 }
@@ -172,5 +176,65 @@ func customKernelSoftmaxTrilBackward(
 		C.uint(colsCount),
 		C.uint(rowsCount),
 		C.uint(offset*4),
+	)
+}
+
+func customKernelCrossEntropyPos(
+	kernelID,
+	commandBufferID,
+	dstBufferID,
+	srcBufferID,
+	smxBufferID,
+	sumBufferID,
+	tgtBufferID unsafe.Pointer,
+	chunkSize int,
+) {
+	C.customKernelCrossEntropyPos(
+		kernelID,
+		commandBufferID,
+		dstBufferID,
+		srcBufferID,
+		smxBufferID,
+		sumBufferID,
+		tgtBufferID,
+		C.uint(chunkSize),
+	)
+}
+
+func customKernelCrossEntropyPosBwd(
+	kernelID,
+	commandBufferID,
+	oGrad,
+	aGrad,
+	tgtBufferID,
+	smxBufferID unsafe.Pointer,
+	chunkSize int,
+) {
+	C.customKernelCrossEntropyPosBwd(
+		kernelID,
+		commandBufferID,
+		oGrad,
+		aGrad,
+		tgtBufferID,
+		smxBufferID,
+		C.uint(chunkSize),
+	)
+}
+
+func customKernelRMSNorm(
+	kernelID,
+	commandBufferID,
+	dstBufferID,
+	srcBufferID,
+	sumBufferID unsafe.Pointer,
+	chunkSize int,
+) {
+	C.customKernelRMSNorm(
+		kernelID,
+		commandBufferID,
+		dstBufferID,
+		srcBufferID,
+		sumBufferID,
+		C.uint(chunkSize),
 	)
 }

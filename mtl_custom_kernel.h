@@ -42,6 +42,13 @@ void customKernelAddTo(
     void *bBuffer
 );
 
+void customKernelAddScalar(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    float value
+);
+
 void customKernelMul(
     void *kernelID,
     void *commandBufferID,
@@ -129,3 +136,34 @@ void customKernelSoftmaxTrilBwd(
     uint rowsCount,
     uint offset
 );
+
+void customKernelCrossEntropyPos(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    void *srcBufferID,
+    void *smxBufferID,
+    void *sumBufferID,
+    void *tgtBufferID,
+    uint chunkSize
+);
+
+void customKernelCrossEntropyPosBwd(
+    void *kernelID,
+    void *commandBufferID,
+    void *oGradBufferID,
+    void *aGradBufferID,
+    void *tgtBufferID,
+    void *smxBufferID,
+    uint chunkSize
+);
+
+void customKernelRMSNorm(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    void *srcBufferID,
+    void *sumBufferID,
+    uint chunkSize
+);
+

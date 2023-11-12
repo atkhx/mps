@@ -34,6 +34,10 @@
         aBuffer:(id<MTLBuffer>)aBuffer
         bBuffer:(id<MTLBuffer>)bBuffer;
 
+- (void) addScalar:(id<MTLCommandBuffer>)commandBuffer
+        dstBuffer:(id<MTLBuffer>)dstBuffer
+        value:(float)value;
+
 // todo add mulTo
 - (void) mul:(id<MTLCommandBuffer>)commandBuffer
         dstBuffer:(id<MTLBuffer>)dstBuffer
@@ -58,7 +62,7 @@
         rowsCount:(uint)rowsCount
         offset:(uint)offset;
 
-- (void) sum:(id<MTLCommandBuffer>)commandBuffer
+- (void) sumByRow:(id<MTLCommandBuffer>)commandBuffer
         dstBuffer:(id<MTLBuffer>)dstBuffer
         srcBuffer:(id<MTLBuffer>)srcBuffer
         colsCount:(uint)colsCount
@@ -67,11 +71,11 @@
 
 // todo naming (here we div each value in row on their sum
 - (void) divOnSum:(id<MTLCommandBuffer>)commandBuffer
+        srcBuffer:(id<MTLBuffer>)srcBuffer
         dstBuffer:(id<MTLBuffer>)dstBuffer
         sumBuffer:(id<MTLBuffer>)sumBuffer
         colsCount:(uint)colsCount
-        rowsCount:(uint)rowsCount
-        offset:(uint)offset;
+        rowsCount:(uint)rowsCount;
 
 - (void) softmax:(id<MTLCommandBuffer>)commandBuffer
         dstBuffer:(id<MTLBuffer>)dstBuffer
@@ -117,6 +121,28 @@
         colsCount:(uint)colsCount
         rowsCount:(uint)rowsCount
         offset:(uint)offset;
+
+
+- (void) crossEntropyPos:(id<MTLCommandBuffer>)commandBuffer
+        dstBuffer:(id<MTLBuffer>)dstBuffer
+        srcBuffer:(id<MTLBuffer>)srcBuffer
+        smxBuffer:(id<MTLBuffer>)smxBuffer
+        sumBuffer:(id<MTLBuffer>)sumBuffer
+        tgtBuffer:(id<MTLBuffer>)tgtBuffer
+        chunkSize:(uint)chunkSize;
+
+- (void) crossEntropyPosBwd:(id<MTLCommandBuffer>)commandBuffer
+        oGrad:(id<MTLBuffer>)oGrad
+        aGrad:(id<MTLBuffer>)aGrad
+        tgtBuffer:(id<MTLBuffer>)tgtBuffer
+        smxBuffer:(id<MTLBuffer>)smxBuffer
+        chunkSize:(uint)chunkSize;
+
+- (void) rmsNorm:(id<MTLCommandBuffer>)commandBuffer
+        dstBuffer:(id<MTLBuffer>)dstBuffer
+        srcBuffer:(id<MTLBuffer>)srcBuffer
+        sumBuffer:(id<MTLBuffer>)sumBuffer
+        chunkSize:(uint)chunkSize;
 
 @end
 
