@@ -5,6 +5,9 @@ import (
 	"context"
 	"sync"
 	"unsafe"
+
+	"github.com/atkhx/mps/custom-kernel"
+	"github.com/atkhx/mps/framework"
 )
 
 func ContextWithCommandBuffer(ctx context.Context, buffer *MTLCommandBuffer) context.Context {
@@ -17,14 +20,14 @@ func CommandBufferFromContext(ctx context.Context) *MTLCommandBuffer {
 
 func NewMTLCommandBuffer(queue *MTLCommandQueue) *MTLCommandBuffer {
 	return &MTLCommandBuffer{
-		id:       mtlCommandBufferCreate(queue.queueID),
+		ID:       framework.MTLCommandBufferCreate(queue.queueID),
 		deviceID: queue.device.deviceID,
 		device:   queue.device,
 	}
 }
 
 type MTLCommandBuffer struct {
-	id       unsafe.Pointer
+	ID       unsafe.Pointer
 	deviceID unsafe.Pointer
 	device   *MTLDevice
 
@@ -37,23 +40,23 @@ type MTLCommandBuffer struct {
 
 func (b *MTLCommandBuffer) Release() {
 	if !b.released {
-		mtlCommandBufferRelease(b.id)
+		framework.MTLCommandBufferRelease(b.ID)
 		b.released = true
 		b.completed = true
 	}
 }
 
 func (b *MTLCommandBuffer) Wait() {
-	b.exclusive(func() {
+	b.Exclusive(func() {
 		if b.uncommitted > 0 {
-			mtlCommandBufferCommitAndWaitUntilCompleted(b.id)
+			framework.MTLCommandBufferCommitAndWaitUntilCompleted(b.ID)
 			b.completed = true
 		}
 		b.uncommitted = 0
 	})
 }
 
-func (b *MTLCommandBuffer) exclusive(operation func()) {
+func (b *MTLCommandBuffer) Exclusive(operation func()) {
 	b.mu.Lock()
 	operation()
 	b.uncommitted++
@@ -61,62 +64,80 @@ func (b *MTLCommandBuffer) exclusive(operation func()) {
 }
 
 func (b *MTLCommandBuffer) Copy(dst, src *MTLBuffer, dstOffset, srcOffset, length int) {
-	b.exclusive(func() {
-		customKernelCopy(b.device.customKernels, b.id, dst.bufferID, src.bufferID, dstOffset, srcOffset, length)
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelCopy(b.device.CustomKernels, b.ID, dst.BufferID, src.BufferID, dstOffset, srcOffset, length)
+	})
+}
+
+func (b *MTLCommandBuffer) CopyWHD(dst, src *MTLBuffer, W, H, D int) {
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelCopyWHD(b.device.CustomKernels, b.ID, dst.BufferID, src.BufferID, W, H, D)
 	})
 }
 
 func (b *MTLCommandBuffer) ClearMTLBuffer(buffer *MTLBuffer) {
-	b.exclusive(func() {
-		customKernelFill(b.device.customKernels, b.id, buffer.bufferID, 0.0, 0, buffer.length)
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelFill(b.device.CustomKernels, b.ID, buffer.BufferID, 0.0, 0, buffer.Length)
 	})
 }
 
 func (b *MTLCommandBuffer) FillMTLBuffer(buffer *MTLBuffer, value float32) {
-	b.exclusive(func() {
-		customKernelFill(b.device.customKernels, b.id, buffer.bufferID, value, 0, buffer.length)
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelFill(b.device.CustomKernels, b.ID, buffer.BufferID, value, 0, buffer.Length)
 	})
 }
 
 func (b *MTLCommandBuffer) FillMTLBufferPart(buffer *MTLBuffer, value float32, offset, length int) {
-	b.exclusive(func() {
-		customKernelFill(b.device.customKernels, b.id, buffer.bufferID, value, offset, length)
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelFill(b.device.CustomKernels, b.ID, buffer.BufferID, value, offset, length)
 	})
 }
 
 func (b *MTLCommandBuffer) Add(dst, src *MTLBuffer, dstOffset, srcOffset, length int) {
-	b.exclusive(func() {
-		customKernelAdd(b.device.customKernels, b.id, dst.bufferID, src.bufferID, dstOffset, srcOffset, length)
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelAdd(b.device.CustomKernels, b.ID, dst.BufferID, src.BufferID, dstOffset, srcOffset, length)
 	})
 }
 
 func (b *MTLCommandBuffer) AddTo(dst, aBuffer, bBuffer *MTLBuffer) {
-	b.exclusive(func() {
-		customKernelAddTo(b.device.customKernels, b.id, dst.bufferID, aBuffer.bufferID, bBuffer.bufferID)
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelAddTo(b.device.CustomKernels, b.ID, dst.BufferID, aBuffer.BufferID, bBuffer.BufferID)
+	})
+}
+
+func (b *MTLCommandBuffer) AddToWHD(dst, aBuffer, bBuffer *MTLBuffer, K float32, W, H, D int) {
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelAddToWHD(b.device.CustomKernels, b.ID, dst.BufferID, aBuffer.BufferID, bBuffer.BufferID, K, W, H, D)
+	})
+}
+
+func (b *MTLCommandBuffer) AddToWHDBwd(aGrad, bGrad, oGrad *MTLBuffer, W, H, D int) {
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelAddToWHDBwd(b.device.CustomKernels, b.ID, aGrad.BufferID, bGrad.BufferID, oGrad.BufferID, W, H, D)
 	})
 }
 
 func (b *MTLCommandBuffer) AddScalar(dst *MTLBuffer, value float32) {
-	b.exclusive(func() {
-		customKernelAddScalar(b.device.customKernels, b.id, dst.bufferID, value)
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelAddScalar(b.device.CustomKernels, b.ID, dst.BufferID, value)
 	})
 }
 
 func (b *MTLCommandBuffer) Mul(dst, src *MTLBuffer, dstOffset, srcOffset, length int) {
-	b.exclusive(func() {
-		customKernelMul(b.device.customKernels, b.id, dst.bufferID, src.bufferID, dstOffset, srcOffset, length)
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelMul(b.device.CustomKernels, b.ID, dst.BufferID, src.BufferID, dstOffset, srcOffset, length)
 	})
 }
 
 func (b *MTLCommandBuffer) ReLuMTLBuffer(dstBuffer, srcBuffer *MTLBuffer) {
-	b.exclusive(func() {
-		customKernelReLU(b.device.customKernels, b.id, dstBuffer.bufferID, srcBuffer.bufferID)
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelReLU(b.device.CustomKernels, b.ID, dstBuffer.BufferID, srcBuffer.BufferID)
 	})
 }
 
 func (b *MTLCommandBuffer) ReLuMTLBufferBwd(dstBuffer, srcBuffer, maskBuffer *MTLBuffer) {
-	b.exclusive(func() {
-		customKernelReLUBackward(b.device.customKernels, b.id, dstBuffer.bufferID, srcBuffer.bufferID, maskBuffer.bufferID)
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelReLUBackward(b.device.CustomKernels, b.ID, dstBuffer.BufferID, srcBuffer.BufferID, maskBuffer.BufferID)
 	})
 }
 
@@ -126,13 +147,13 @@ func (b *MTLCommandBuffer) SoftmaxBuffer(
 	sumOutBuffer *MTLBuffer,
 	colsCount, rowsCount, offset int,
 ) {
-	b.exclusive(func() {
-		customKernelSoftmaxForward(
-			b.device.customKernels,
-			b.id,
-			destinationBuffer.bufferID,
-			sourceBuffer.bufferID,
-			sumOutBuffer.bufferID,
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelSoftmaxForward(
+			b.device.CustomKernels,
+			b.ID,
+			destinationBuffer.BufferID,
+			sourceBuffer.BufferID,
+			sumOutBuffer.BufferID,
 			colsCount,
 			rowsCount,
 			offset,
@@ -146,13 +167,13 @@ func (b *MTLCommandBuffer) DropoutBuffer(
 	mskBuffer *MTLBuffer,
 	probability float32,
 ) {
-	b.exclusive(func() {
-		customKernelDropout(
-			b.device.customKernels,
-			b.id,
-			dstBuffer.bufferID,
-			srcBuffer.bufferID,
-			mskBuffer.bufferID,
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelDropout(
+			b.device.CustomKernels,
+			b.ID,
+			dstBuffer.BufferID,
+			srcBuffer.BufferID,
+			mskBuffer.BufferID,
 			probability,
 		)
 	})
@@ -164,13 +185,13 @@ func (b *MTLCommandBuffer) DropoutBwdBuffer(
 	mskBuffer *MTLBuffer,
 	probability float32,
 ) {
-	b.exclusive(func() {
-		customKernelDropoutBwd(
-			b.device.customKernels,
-			b.id,
-			dstBuffer.bufferID,
-			srcBuffer.bufferID,
-			mskBuffer.bufferID,
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelDropoutBwd(
+			b.device.CustomKernels,
+			b.ID,
+			dstBuffer.BufferID,
+			srcBuffer.BufferID,
+			mskBuffer.BufferID,
 			probability,
 		)
 	})
@@ -187,13 +208,13 @@ func (b *MTLCommandBuffer) UpdateWithAdam(
 	beta1powIterationLR,
 	beta2powIteration float32,
 ) {
-	b.exclusive(func() {
-		customKernelUpdateWithAdam(
-			b.device.customKernels, b.id,
-			dataBuffer.bufferID,
-			gradBuffer.bufferID,
-			mBuffer.bufferID,
-			vBuffer.bufferID,
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelUpdateWithAdam(
+			b.device.CustomKernels, b.ID,
+			dataBuffer.BufferID,
+			gradBuffer.BufferID,
+			mBuffer.BufferID,
+			vBuffer.BufferID,
 			beta1,
 			beta2,
 			beta1powIterationLR,
@@ -209,12 +230,12 @@ func (b *MTLCommandBuffer) SoftmaxBufferTril(
 	sourceBuffer *MTLBuffer,
 	colsCount, rowsCount, offset int,
 ) {
-	b.exclusive(func() {
-		customKernelSoftmaxTrilFwdCreate(
-			b.device.customKernels,
-			b.id,
-			destinationBuffer.bufferID,
-			sourceBuffer.bufferID,
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelSoftmaxTrilFwdCreate(
+			b.device.CustomKernels,
+			b.ID,
+			destinationBuffer.BufferID,
+			sourceBuffer.BufferID,
 			colsCount,
 			rowsCount,
 			offset,
@@ -228,13 +249,13 @@ func (b *MTLCommandBuffer) SoftmaxBufferTrilBwd(
 	softmaxBuffer *MTLBuffer,
 	colsCount, rowsCount, offset int,
 ) {
-	b.exclusive(func() {
-		customKernelSoftmaxTrilBackward(
-			b.device.customKernels,
-			b.id,
-			destinationBuffer.bufferID,
-			sourceBuffer.bufferID,
-			softmaxBuffer.bufferID,
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelSoftmaxTrilBackward(
+			b.device.CustomKernels,
+			b.ID,
+			destinationBuffer.BufferID,
+			sourceBuffer.BufferID,
+			softmaxBuffer.BufferID,
 			colsCount,
 			rowsCount,
 			offset,
@@ -250,15 +271,15 @@ func (b *MTLCommandBuffer) CrossEntropyPos(
 	tgtBuffer *MTLBuffer,
 	chunkSize int,
 ) {
-	b.exclusive(func() {
-		customKernelCrossEntropyPos(
-			b.device.customKernels,
-			b.id,
-			dstBuffer.bufferID,
-			srcBuffer.bufferID,
-			smxBuffer.bufferID,
-			sumBuffer.bufferID,
-			tgtBuffer.bufferID,
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelCrossEntropyPos(
+			b.device.CustomKernels,
+			b.ID,
+			dstBuffer.BufferID,
+			srcBuffer.BufferID,
+			smxBuffer.BufferID,
+			sumBuffer.BufferID,
+			tgtBuffer.BufferID,
 			chunkSize,
 		)
 	})
@@ -271,14 +292,14 @@ func (b *MTLCommandBuffer) CrossEntropyPosBwd(
 	smxBuffer *MTLBuffer,
 	chunkSize int,
 ) {
-	b.exclusive(func() {
-		customKernelCrossEntropyPosBwd(
-			b.device.customKernels,
-			b.id,
-			oGrad.bufferID,
-			aGrad.bufferID,
-			tgtBuffer.bufferID,
-			smxBuffer.bufferID,
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelCrossEntropyPosBwd(
+			b.device.CustomKernels,
+			b.ID,
+			oGrad.BufferID,
+			aGrad.BufferID,
+			tgtBuffer.BufferID,
+			smxBuffer.BufferID,
 			chunkSize,
 		)
 	})
@@ -290,38 +311,32 @@ func (b *MTLCommandBuffer) RMSNorm(
 	sumBuffer *MTLBuffer,
 	chunkSize int,
 ) {
-	b.exclusive(func() {
-		customKernelRMSNorm(
-			b.device.customKernels,
-			b.id,
-			dstBuffer.bufferID,
-			srcBuffer.bufferID,
-			sumBuffer.bufferID,
+	b.Exclusive(func() {
+		custom_kernel.CustomKernelRMSNorm(
+			b.device.CustomKernels,
+			b.ID,
+			dstBuffer.BufferID,
+			srcBuffer.BufferID,
+			sumBuffer.BufferID,
 			chunkSize,
 		)
 	})
 }
 
-func (b *MTLCommandBuffer) MatrixMultiplyAB(aM, bM, cM *Matrix, alpha, beta float32) {
-	b.MatrixMultiply(aM, bM, cM, aM.cols, false, false, alpha, beta)
-}
-
-func (b *MTLCommandBuffer) MatrixMultiplyATB(aM, bM, cM *Matrix, alpha, beta float32) {
-	b.MatrixMultiply(aM, bM, cM, aM.cols, false, true, alpha, beta)
-}
-
-func (b *MTLCommandBuffer) MatrixMultiplyTAB(aM, bM, cM *Matrix, alpha, beta float32) {
-	b.MatrixMultiply(aM, bM, cM, bM.rows, true, false, alpha, beta)
-}
-
-func (b *MTLCommandBuffer) MatrixMultiply(aM, bM, cM *Matrix, iC int, aT, bT bool, alpha, beta float32) {
-	b.exclusive(func() {
-		mpsMatrixMultiply(b.deviceID, b.id, aM.matrixID, bM.matrixID, cM.matrixID, iC, aT, bT, alpha, beta)
+func (b *MTLCommandBuffer) MPSMatrixRandomMTGP32Encode(randomizer *MatrixRandomMTGP32, aM *MPSMatrix) {
+	b.Exclusive(func() {
+		framework.MPSMatrixRandomMTGP32Encode(randomizer.id, b.ID, aM.matrixID)
 	})
 }
 
-func (b *MTLCommandBuffer) MatrixRandom(randomizer *MatrixRandomMTGP32, aM *Matrix) {
-	b.exclusive(func() {
-		mpsMatrixRandom(randomizer.id, b.id, aM.matrixID)
+func (b *MTLCommandBuffer) MatrixMultiplyWithKernel(kernelID unsafe.Pointer, aMatrix, bMatrix, cMatrix *MPSMatrix) {
+	b.Exclusive(func() {
+		framework.MPSMatrixMultiplicationEncode(
+			b.ID,
+			kernelID,
+			aMatrix.matrixID,
+			bMatrix.matrixID,
+			cMatrix.matrixID,
+		)
 	})
 }

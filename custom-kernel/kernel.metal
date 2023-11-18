@@ -14,6 +14,17 @@ kernel void copy(
     dstBuffer[id] = srcBuffer[id];
 }
 
+kernel void copyWHD(
+    device float *dstBuffer [[ buffer(0) ]],
+    device float *srcBuffer [[ buffer(1) ]],
+    constant uint& width [[ buffer(2) ]],
+    constant uint& height [[ buffer(3) ]],
+    constant uint& square [[ buffer(4) ]],
+    const uint3 gid [[ thread_position_in_grid ]] )
+{
+    dstBuffer[gid.z*square + gid.y*width + gid.x] = srcBuffer[gid.z*square + gid.y*width + gid.x];
+}
+
 kernel void fill(
     device float *dstBuffer [[ buffer(0) ]],
     const uint id [[ thread_position_in_grid ]],
@@ -37,6 +48,32 @@ kernel void addTo(
     const uint id [[ thread_position_in_grid ]] )
 {
     dstBuffer[id] = aBuffer[id] + bBuffer[id];
+}
+
+kernel void addToWHD(
+    device float *dstBuffer [[ buffer(0) ]],
+    device float *aBuffer [[ buffer(1) ]],
+    device float *bBuffer [[ buffer(2) ]],
+    constant uint& k [[ buffer(3) ]],
+    constant uint& width [[ buffer(4) ]],
+    constant uint& square [[ buffer(5) ]],
+    const uint3 gid [[ thread_position_in_grid ]] )
+{
+    uint offset = gid.z*square + gid.y*width + gid.x;
+    dstBuffer[offset] = (k * dstBuffer[offset]) + aBuffer[offset] + bBuffer[offset];
+}
+
+kernel void addToWHDBwd(
+    device float *aGrad [[ buffer(0) ]],
+    device float *bGrad [[ buffer(1) ]],
+    device float *oGrad [[ buffer(2) ]],
+    constant uint& width [[ buffer(3) ]],
+    constant uint& square [[ buffer(4) ]],
+    const uint3 gid [[ thread_position_in_grid ]] )
+{
+    uint offset = gid.z*square + gid.y*width + gid.x;
+    aGrad[offset] += oGrad[offset];
+    bGrad[offset] += oGrad[offset];
 }
 
 kernel void addScalar(
@@ -275,4 +312,135 @@ kernel void sqsByRow(
         val += srcBuffer[i] * srcBuffer[i];
     }
     dstBuffer[gid.y] = sqrt(1e-5 + (val/float(width)));
+}
+
+kernel void sqsGradByRow(
+    device float *aggData [[ buffer(0) ]],
+    device float *aggGrad [[ buffer(1) ]],
+    device float *outputData [[ buffer(2) ]],
+    device float *outputGrad [[ buffer(3) ]],
+    constant uint& chunkSize [[ buffer(4) ]],
+    const uint id [[ thread_position_in_grid ]] )
+{
+    float ssGrad = 0.0;
+    for (uint i = id * chunkSize; i < (id+1)*chunkSize; ++i) {
+        ssGrad -= outputGrad[i] * outputData[i];
+    }
+
+    ssGrad *= (1.0 / float(chunkSize)) / aggData[id];
+
+    aggGrad[id] = ssGrad;
+}
+
+kernel void rmsGrad(
+    device float *inputData [[ buffer(0) ]],
+    device float *inputGrad [[ buffer(1) ]],
+    device float *outputGrad [[ buffer(2) ]],
+    device float *aggData [[ buffer(3) ]],
+    device float *aggGrad [[ buffer(4) ]],
+    constant uint& chunkSize [[ buffer(5) ]],
+    const uint id [[ thread_position_in_grid ]] )
+{
+    inputGrad[id] += (outputGrad[id] + (inputData[id] * aggGrad[id / chunkSize])) / aggData[id / chunkSize];
+}
+
+kernel void meanByRows(
+    device float *srcBuffer [[ buffer(0) ]],
+    device float *dstBuffer [[ buffer(1) ]],
+    constant uint& width [[ buffer(2) ]],
+    const uint2 gid [[ thread_position_in_grid ]] )
+{
+    float sumValue = 0.0;
+    for (uint i = gid.y * width; i < (gid.y+1) * width; ++i) {
+        sumValue += srcBuffer[i];
+    }
+    dstBuffer[gid.y] = sumValue / float(width);
+}
+
+kernel void meanByRowsBwd(
+    device float *inputGrad [[ buffer(0) ]],
+    device float *outputGrad [[ buffer(1) ]],
+    constant uint& width [[ buffer(2) ]],
+    const uint id [[ thread_position_in_grid ]] )
+{
+    inputGrad[id] += outputGrad[id / width];
+}
+
+kernel void concatByRows(
+    device float *inputData [[ buffer(0) ]],
+    device float *outputData [[ buffer(1) ]],
+    constant uint& inputWidth [[ buffer(2) ]],
+    constant uint& outputWidth [[ buffer(3) ]],
+    constant uint& outputOffset [[ buffer(4) ]],
+    const uint2 gid [[ thread_position_in_grid ]] )
+{
+    outputData[(gid.y*outputWidth) + outputOffset + gid.x] = inputData[(gid.y*inputWidth) + gid.x];
+}
+
+kernel void concatByRowsBwd(
+    device float *inputGrad [[ buffer(0) ]],
+    device float *outputGrad [[ buffer(1) ]],
+    constant uint& inputWidth [[ buffer(2) ]],
+    constant uint& outputWidth [[ buffer(3) ]],
+    constant uint& outputOffset [[ buffer(4) ]],
+    const uint2 gid [[ thread_position_in_grid ]] )
+{
+    inputGrad[(gid.y*inputWidth) + gid.x] += outputGrad[(gid.y*outputWidth) + outputOffset + gid.x];
+}
+
+kernel void embeddings(
+    device float *inputData [[ buffer(0) ]],
+    device float *outputData [[ buffer(1) ]],
+    device float *posEmbedding [[ buffer(2) ]],
+    device float *tokenEmbedding [[ buffer(3) ]],
+    constant uint& featuresCount [[ buffer(4) ]],
+    constant uint& contextLength [[ buffer(5) ]],
+    const uint2 gid [[ thread_position_in_grid ]] )
+{
+    int outputOffset = gid.y*featuresCount + gid.x;
+
+    int posEmbeddingY      = gid.y - (contextLength * int(gid.y/contextLength));
+    int posEmbeddingOffset = (posEmbeddingY*featuresCount) + gid.x;
+
+    int tokenEmbeddingY      = inputData[gid.y];
+    int tokenEmbeddingOffset = (tokenEmbeddingY * featuresCount) + gid.x;
+
+    outputData[outputOffset] = posEmbedding[posEmbeddingOffset] + tokenEmbedding[tokenEmbeddingOffset];
+}
+
+kernel void embeddingsBwd(
+    device float *inputData [[ buffer(0) ]],
+    device float *outputGrad [[ buffer(1) ]],
+    device float *tokenEmbeddingGrad [[ buffer(2) ]],
+    constant uint& featuresCount [[ buffer(3) ]],
+    const uint2 gid [[ thread_position_in_grid ]] )
+{
+    int outputOffset = gid.y*featuresCount + gid.x;
+
+    int tokenEmbeddingY      = inputData[gid.y];
+    int tokenEmbeddingOffset = (tokenEmbeddingY * featuresCount) + gid.x;
+
+    tokenEmbeddingGrad[tokenEmbeddingOffset] += outputGrad[outputOffset];
+}
+
+kernel void transposeTo(
+    device float *inputData [[ buffer(0) ]],
+    device float *outputData [[ buffer(1) ]],
+    constant uint& width [[ buffer(2) ]],
+    constant uint& height [[ buffer(3) ]],
+    constant uint& square [[ buffer(4) ]],
+    const uint3 gid [[ thread_position_in_grid ]] )
+{
+    outputData[gid.z*square + gid.x*height + gid.y] = inputData[gid.z*square + gid.y*width + gid.x];
+}
+
+kernel void transposeAndAddTo(
+    device float *inputData [[ buffer(0) ]],
+    device float *outputData [[ buffer(1) ]],
+    constant uint& width [[ buffer(2) ]],
+    constant uint& height [[ buffer(3) ]],
+    constant uint& square [[ buffer(4) ]],
+    const uint3 gid [[ thread_position_in_grid ]] )
+{
+    outputData[gid.z*square + gid.x*height + gid.y] += inputData[gid.z*square + gid.y*width + gid.x];
 }

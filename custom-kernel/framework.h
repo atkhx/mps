@@ -2,7 +2,7 @@
 #include <MetalPerformanceShaders/MetalPerformanceShaders.h>
 #include <Metal/Metal.h>
 
-#include "custom_kernel.h"
+#include "kernel.h"
 
 void* customKernelCreate(void *deviceID, const char *kernelSource);
 
@@ -14,6 +14,16 @@ void customKernelCopy(
     const uint dstOffset,
     const uint srcOffset,
     const uint length
+);
+
+void customKernelCopyWHD(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    void *srcBufferID,
+    const uint W,
+    const uint H,
+    const uint D
 );
 
 void customKernelFill(
@@ -40,6 +50,27 @@ void customKernelAddTo(
     void *dstBufferID,
     void *aBuffer,
     void *bBuffer
+);
+void customKernelAddToWHD(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBufferID,
+    void *aBuffer,
+    void *bBuffer,
+    const float K,
+    const uint W,
+    const uint H,
+    const uint D
+);
+void customKernelAddToWHDBwd(
+    void *kernelID,
+    void *commandBufferID,
+    void *aGrad,
+    void *bGrad,
+    void *oGrad,
+    const uint W,
+    const uint H,
+    const uint D
 );
 
 void customKernelAddScalar(
@@ -167,3 +198,88 @@ void customKernelRMSNorm(
     uint chunkSize
 );
 
+void customKernelRMSNormBwd(
+    void *kernelID,
+    void *commandBufferID,
+    void *inputDataBufferID,
+    void *inputGradBufferID,
+    void *outputDataBufferID,
+    void *outputGradBufferID,
+    void *aggDataBufferID,
+    void *aggGradBufferID,
+    uint chunkSize
+);
+
+void customKernelMeanByRows(
+    void *kernelID,
+    void *commandBufferID,
+    void *inputDataBufferID,
+    void *outputDataBufferID,
+    uint chunkSize
+);
+
+void customKernelMeanByRowsBwd(
+    void *kernelID,
+    void *commandBufferID,
+    void *inputGradBufferID,
+    void *outputGradBufferID,
+    uint chunkSize
+);
+
+void customKernelConcatByRows(
+    void *kernelID,
+    void *commandBufferID,
+    void *inputDataBufferID,
+    void *outputDataBufferID,
+    uint inputWidth,
+    uint outputWidth,
+    uint outputOffset
+);
+
+void customKernelConcatByRowsBwd(
+    void *kernelID,
+    void *commandBufferID,
+    void *inputGradBufferID,
+    void *outputGradBufferID,
+    uint inputWidth,
+    uint outputWidth,
+    uint outputOffset
+);
+
+void customKernelEmbeddings(
+    void *kernelID,
+    void *commandBufferID,
+    void *inputDataBufferID,
+    void *outputDataBufferID,
+    void *posEmbeddingBufferID,
+    void *tokenEmbeddingBufferID,
+    uint featuresCount,
+    uint contextLength
+);
+
+void customKernelEmbeddingsBwd(
+    void *kernelID,
+    void *commandBufferID,
+    void *inputDataBufferID,
+    void *outputGradBufferID,
+    void *tokenEmbeddingGradBufferID,
+    uint featuresCount
+);
+
+void transposeTo(
+    void *kernelID,
+    void *commandBufferID,
+    void *inputData,
+    void *outputData,
+    uint width,
+    uint height
+);
+
+void transposeAndAddTo(
+    void *kernelID,
+    void *commandBufferID,
+    void *inputData,
+    void *outputData,
+    uint width,
+    uint height
+);
