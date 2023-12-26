@@ -44,3 +44,24 @@ void* mpsMatrixRandomDistributionDescriptorCreate(float min, float max);
 void* mpsMatrixRandomMTGP32Create(void *deviceID, void *distribution, NSUInteger seed);
 void mpsMatrixRandomMTGP32Encode(void *kernelID, void *commandBufferID, void *dstMatrix);
 
+// MPSMatrixSoftMax
+void* mpsMatrixSoftMaxCreate(void *deviceID);
+void mpsMatrixSoftMaxEncode(
+    void *commandBufferID,
+    void *kernelID,
+    void *inputMatrix,
+    void *resultMatrix
+);
+
+// MPSMatrixSoftMaxGradient
+
+void* mpsMatrixSoftMaxGradientCreate(void *deviceID);
+void mpsMatrixSoftMaxGradientEncode(
+    void *commandBufferID,
+    void *kernelID,
+    void *gradientMatrix,
+    void *forwardOutputMatrix,
+    void *resultMatrix
+);
+
+

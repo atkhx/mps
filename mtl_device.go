@@ -28,7 +28,7 @@ type Releasable interface {
 func NewMTLDevice() *MTLDevice {
 	deviceID := framework.MTLDeviceCreate()
 	device := &MTLDevice{
-		deviceID:      deviceID,
+		DeviceID:      deviceID,
 		CustomKernels: custom_kernel.CustomKernelCreate(deviceID),
 	}
 
@@ -36,7 +36,7 @@ func NewMTLDevice() *MTLDevice {
 }
 
 type MTLDevice struct {
-	deviceID      unsafe.Pointer
+	DeviceID      unsafe.Pointer
 	resources     []Releasable
 	CustomKernels unsafe.Pointer
 }
@@ -48,13 +48,13 @@ func (device *MTLDevice) CreateCommandQueue() *MTLCommandQueue {
 }
 
 func (device *MTLDevice) CreateBufferWithBytes(data []float32) *MTLBuffer {
-	buffer := NewMTLBufferWithBytes(device, data)
+	buffer := newMTLBufferWithBytes(device, data)
 	device.regSource(buffer)
 	return buffer
 }
 
 func (device *MTLDevice) CreateBufferWithLength(bfLength int) *MTLBuffer {
-	buffer := NewMTLBufferWithLength(device, bfLength)
+	buffer := newMTLBufferWithLength(device, bfLength)
 	device.regSource(buffer)
 	return buffer
 }
@@ -69,7 +69,7 @@ func (device *MTLDevice) CreateMatrixMultiplyKernel(
 	transposeRight bool,
 ) unsafe.Pointer {
 	return framework.MPSMatrixMultiplicationCreate(
-		device.deviceID,
+		device.DeviceID,
 		resultRows,
 		resultColumns,
 		interiorColumns,
@@ -78,7 +78,6 @@ func (device *MTLDevice) CreateMatrixMultiplyKernel(
 		transposeLeft,
 		transposeRight,
 	)
-
 }
 
 type MatrixRandomDistribution struct {
@@ -90,15 +89,15 @@ func (device *MTLDevice) CreateMatrixRandomDistribution(min, max float32) *Matri
 }
 
 type MatrixRandomMTGP32 struct {
-	id unsafe.Pointer
+	ID unsafe.Pointer
 }
 
 func (device *MTLDevice) CreateMatrixRandomMTGP32(
 	distribution *MatrixRandomDistribution,
 	seed uint64,
 ) *MatrixRandomMTGP32 {
-	return &MatrixRandomMTGP32{id: framework.MPSMatrixRandomMTGP32Create(
-		device.deviceID,
+	return &MatrixRandomMTGP32{ID: framework.MPSMatrixRandomMTGP32Create(
+		device.DeviceID,
 		distribution.id,
 		seed,
 	)}
@@ -113,5 +112,5 @@ func (device *MTLDevice) Release() {
 		device.resources[i-1].Release()
 	}
 	device.resources = nil
-	framework.MTLDeviceRelease(device.deviceID)
+	framework.MTLDeviceRelease(device.DeviceID)
 }

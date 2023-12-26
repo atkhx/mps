@@ -6,12 +6,14 @@ import (
 	"github.com/atkhx/mps/framework"
 )
 
-func NewMTLBufferWithBytes(device *MTLDevice, data []float32) *MTLBuffer {
-	bufferID := framework.MTLBufferCreateCreateWithBytes(device.deviceID, data)
+const maxBufferSize = 32 * 1024 * 1024 * 1024
+
+func newMTLBufferWithBytes(device *MTLDevice, data []float32) *MTLBuffer {
+	bufferID := framework.MTLBufferCreateWithBytes(device.DeviceID, data)
 	contents := framework.MTLBufferGetContents(bufferID)
 	bfLength := len(data)
 
-	byteSlice := (*[1 << 30]byte)(contents)[:bfLength:bfLength]
+	byteSlice := (*[maxBufferSize]byte)(contents)[:bfLength:bfLength]
 	float32Slice := *(*[]float32)(unsafe.Pointer(&byteSlice))
 
 	return &MTLBuffer{
@@ -22,11 +24,11 @@ func NewMTLBufferWithBytes(device *MTLDevice, data []float32) *MTLBuffer {
 	}
 }
 
-func NewMTLBufferWithLength(device *MTLDevice, bfLength int) *MTLBuffer {
-	bufferID := framework.MTLBufferCreateWithLength(device.deviceID, bfLength)
+func newMTLBufferWithLength(device *MTLDevice, bfLength int) *MTLBuffer {
+	bufferID := framework.MTLBufferCreateWithLength(device.DeviceID, bfLength)
 	contents := framework.MTLBufferGetContents(bufferID)
 
-	byteSlice := (*[1 << 30]byte)(contents)[:bfLength:bfLength]
+	byteSlice := (*[maxBufferSize]byte)(contents)[:bfLength:bfLength]
 	float32Slice := *(*[]float32)(unsafe.Pointer(&byteSlice))
 
 	return &MTLBuffer{

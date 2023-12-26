@@ -30,6 +30,8 @@ func MPSMatrixRelease(matrixID unsafe.Pointer) {
 	C.mpsMatrixRelease(matrixID)
 }
 
+// MPSMatrixMultiplication
+
 func MPSMatrixMultiplicationCreate(
 	deviceID unsafe.Pointer,
 
@@ -62,10 +64,14 @@ func MPSMatrixMultiplicationEncode(commandBufferID, kernelID, aMatrixID, bMatrix
 	C.mpsMatrixMultiplicationEncode(commandBufferID, kernelID, aMatrixID, bMatrixID, cMatrixID)
 }
 
+// MPSMatrixRandomDistributionDescriptor
+
 func MPSMatrixRandomDistributionDescriptorCreate(min, max float32) unsafe.Pointer {
 	// todo add release func
 	return C.mpsMatrixRandomDistributionDescriptorCreate(C.float(min), C.float(max))
 }
+
+// MPSMatrixRandomMTGP32
 
 func MPSMatrixRandomMTGP32Create(deviceID, distributionID unsafe.Pointer, seed uint64) unsafe.Pointer {
 	// todo add release func
@@ -74,4 +80,24 @@ func MPSMatrixRandomMTGP32Create(deviceID, distributionID unsafe.Pointer, seed u
 
 func MPSMatrixRandomMTGP32Encode(kernelID, commandBufferID, aMatrixID unsafe.Pointer) {
 	C.mpsMatrixRandomMTGP32Encode(kernelID, commandBufferID, aMatrixID)
+}
+
+// MPSMatrixSoftMax
+
+func MPSMatrixSoftMaxCreate(deviceID unsafe.Pointer) unsafe.Pointer {
+	return unsafe.Pointer(C.mpsMatrixSoftMaxCreate(deviceID))
+}
+
+func MPSMatrixSoftMaxEncode(commandBufferID, kernelID, inputMatrix, resultMatrix unsafe.Pointer) {
+	C.mpsMatrixSoftMaxEncode(commandBufferID, kernelID, inputMatrix, resultMatrix)
+}
+
+// MPSMatrixSoftMaxGradient
+
+func MPSMatrixSoftMaxGradientCreate(deviceID unsafe.Pointer) unsafe.Pointer {
+	return unsafe.Pointer(C.mpsMatrixSoftMaxGradientCreate(deviceID))
+}
+
+func MPSMatrixSoftMaxGradientEncode(commandBufferID, kernelID, gradientMatrix, forwardOutputMatrix, resultMatrix unsafe.Pointer) {
+	C.mpsMatrixSoftMaxGradientEncode(commandBufferID, kernelID, gradientMatrix, forwardOutputMatrix, resultMatrix)
 }

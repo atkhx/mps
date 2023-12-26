@@ -90,20 +90,6 @@ void customKernelMul(
     const uint length
 );
 
-void customKernelReLU(
-    void *kernelID,
-    void *commandBufferID,
-    void *dstBufferID,
-    void *srcBufferID
-);
-void customKernelReLUBwd(
-    void *kernelID,
-    void *commandBufferID,
-    void *dstBufferID,
-    void *srcBufferID,
-    void *mskBufferID
-);
-
 void customKernelSoftmax(
     void *kernelID,
     void *commandBufferID,
@@ -113,23 +99,6 @@ void customKernelSoftmax(
     uint colsCount,
     uint rowsCount,
     uint offset
-);
-
-void customKernelDropout(
-    void *kernelID,
-    void *commandBufferID,
-    void *dstBufferID,
-    void *srcBufferID,
-    void *mskBufferID,
-    float probability
-);
-void customKernelDropoutBwd(
-    void *kernelID,
-    void *commandBufferID,
-    void *dstBufferID,
-    void *srcBufferID,
-    void *mskBufferID,
-    float probability
 );
 
 void customKernelUpdateWithAdam(
@@ -168,6 +137,24 @@ void customKernelSoftmaxTrilBwd(
     uint offset
 );
 
+void customKernelNLLByPos(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBuffer,
+    void *smxBuffer,
+    void *tgtBuffer,
+    uint chunkSize
+);
+
+void customKernelNLLByPosBwd(
+    void *kernelID,
+    void *commandBufferID,
+    void *oGradBufferID,
+    void *aGradBufferID,
+    void *tgtBufferID,
+    void *smxBufferID,
+    uint chunkSize);
+
 void customKernelCrossEntropyPos(
     void *kernelID,
     void *commandBufferID,
@@ -187,83 +174,6 @@ void customKernelCrossEntropyPosBwd(
     void *tgtBufferID,
     void *smxBufferID,
     uint chunkSize
-);
-
-void customKernelRMSNorm(
-    void *kernelID,
-    void *commandBufferID,
-    void *dstBufferID,
-    void *srcBufferID,
-    void *sumBufferID,
-    uint chunkSize
-);
-
-void customKernelRMSNormBwd(
-    void *kernelID,
-    void *commandBufferID,
-    void *inputDataBufferID,
-    void *inputGradBufferID,
-    void *outputDataBufferID,
-    void *outputGradBufferID,
-    void *aggDataBufferID,
-    void *aggGradBufferID,
-    uint chunkSize
-);
-
-void customKernelMeanByRows(
-    void *kernelID,
-    void *commandBufferID,
-    void *inputDataBufferID,
-    void *outputDataBufferID,
-    uint chunkSize
-);
-
-void customKernelMeanByRowsBwd(
-    void *kernelID,
-    void *commandBufferID,
-    void *inputGradBufferID,
-    void *outputGradBufferID,
-    uint chunkSize
-);
-
-void customKernelConcatByRows(
-    void *kernelID,
-    void *commandBufferID,
-    void *inputDataBufferID,
-    void *outputDataBufferID,
-    uint inputWidth,
-    uint outputWidth,
-    uint outputOffset
-);
-
-void customKernelConcatByRowsBwd(
-    void *kernelID,
-    void *commandBufferID,
-    void *inputGradBufferID,
-    void *outputGradBufferID,
-    uint inputWidth,
-    uint outputWidth,
-    uint outputOffset
-);
-
-void customKernelEmbeddings(
-    void *kernelID,
-    void *commandBufferID,
-    void *inputDataBufferID,
-    void *outputDataBufferID,
-    void *posEmbeddingBufferID,
-    void *tokenEmbeddingBufferID,
-    uint featuresCount,
-    uint contextLength
-);
-
-void customKernelEmbeddingsBwd(
-    void *kernelID,
-    void *commandBufferID,
-    void *inputDataBufferID,
-    void *outputGradBufferID,
-    void *tokenEmbeddingGradBufferID,
-    uint featuresCount
 );
 
 void transposeTo(

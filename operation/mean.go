@@ -2,12 +2,13 @@ package operation
 
 import (
 	"github.com/atkhx/mps"
-	"github.com/atkhx/mps/custom-kernel"
+	"github.com/atkhx/mps/operation/mean"
 )
 
 func NewOpMean(device *mps.MTLDevice, inputData, inputGrad, outputData, outputGrad *mps.MTLBuffer, chunkSize int) *OpMean {
 	return &OpMean{
 		device:     device,
+		kernel:     mean.New(device.DeviceID),
 		inputData:  inputData,
 		inputGrad:  inputGrad,
 		outputData: outputData,
@@ -18,6 +19,7 @@ func NewOpMean(device *mps.MTLDevice, inputData, inputGrad, outputData, outputGr
 
 type OpMean struct {
 	device *mps.MTLDevice
+	kernel *mean.Kernel
 
 	inputData *mps.MTLBuffer
 	inputGrad *mps.MTLBuffer
@@ -30,8 +32,7 @@ type OpMean struct {
 
 func (op *OpMean) Forward(b *mps.MTLCommandBuffer) {
 	b.Exclusive(func() {
-		custom_kernel.CustomKernelMeanByRows(
-			op.device.CustomKernels,
+		op.kernel.Forward(
 			b.ID,
 			op.inputData.BufferID,
 			op.outputData.BufferID,
@@ -42,8 +43,7 @@ func (op *OpMean) Forward(b *mps.MTLCommandBuffer) {
 
 func (op *OpMean) Backward(b *mps.MTLCommandBuffer) {
 	b.Exclusive(func() {
-		custom_kernel.CustomKernelMeanByRowsBwd(
-			op.device.CustomKernels,
+		op.kernel.Backward(
 			b.ID,
 			op.inputGrad.BufferID,
 			op.outputGrad.BufferID,

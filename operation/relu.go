@@ -1,31 +1,40 @@
 package operation
 
-import "github.com/atkhx/mps"
+import (
+	"unsafe"
+
+	"github.com/atkhx/mps"
+	"github.com/atkhx/mps/operation/relu"
+)
 
 func NewOpReLu(device *mps.MTLDevice, inputData, inputGrad, outputData, outputGrad *mps.MTLBuffer) *OpReLu {
 	return &OpReLu{
-		device:     device,
-		inputData:  inputData,
-		inputGrad:  inputGrad,
-		outputData: outputData,
-		outputGrad: outputGrad,
+		kernel:     relu.New(device.DeviceID),
+		inputData:  inputData.BufferID,
+		inputGrad:  inputGrad.BufferID,
+		outputData: outputData.BufferID,
+		outputGrad: outputGrad.BufferID,
 	}
 }
 
 type OpReLu struct {
-	device *mps.MTLDevice
+	kernel *relu.Kernel
 
-	inputData *mps.MTLBuffer
-	inputGrad *mps.MTLBuffer
+	inputData unsafe.Pointer
+	inputGrad unsafe.Pointer
 
-	outputData *mps.MTLBuffer
-	outputGrad *mps.MTLBuffer
+	outputData unsafe.Pointer
+	outputGrad unsafe.Pointer
 }
 
 func (op *OpReLu) Forward(b *mps.MTLCommandBuffer) {
-	b.ReLuMTLBuffer(op.outputData, op.inputData)
+	b.Exclusive(func() {
+		op.kernel.Forward(b.ID, op.inputData, op.outputData)
+	})
 }
 
 func (op *OpReLu) Backward(b *mps.MTLCommandBuffer) {
-	b.ReLuMTLBufferBwd(op.inputGrad, op.outputGrad, op.outputData)
+	b.Exclusive(func() {
+		op.kernel.Backward(b.ID, op.inputData, op.inputGrad, op.outputGrad)
+	})
 }

@@ -1,44 +1,42 @@
 package operation
 
 import (
+	"unsafe"
+
 	"github.com/atkhx/mps"
-	"github.com/atkhx/mps/custom-kernel"
+	"github.com/atkhx/mps/operation/embeddings"
 )
 
 func NewOpEmbeddings(
 	device *mps.MTLDevice,
 	tokenEmbeddingData,
 	tokenEmbeddingGrad,
-	positionEmbeddingData,
 	inputData,
 	outputData,
 	outputGrad *mps.MTLBuffer,
 	featuresCount, contextLength int,
 ) *OpEmbeddings {
 	return &OpEmbeddings{
-		device:                device,
-		tokenEmbeddingData:    tokenEmbeddingData,
-		tokenEmbeddingGrad:    tokenEmbeddingGrad,
-		positionEmbeddingData: positionEmbeddingData,
-		inputData:             inputData,
-		outputData:            outputData,
-		outputGrad:            outputGrad,
-		featuresCount:         featuresCount,
-		contextLength:         contextLength,
+		kernel:             embeddings.New(device.DeviceID),
+		tokenEmbeddingData: tokenEmbeddingData.BufferID,
+		tokenEmbeddingGrad: tokenEmbeddingGrad.BufferID,
+		inputData:          inputData.BufferID,
+		outputData:         outputData.BufferID,
+		outputGrad:         outputGrad.BufferID,
+		featuresCount:      featuresCount,
+		contextLength:      contextLength,
 	}
 }
 
 type OpEmbeddings struct {
-	device *mps.MTLDevice
+	kernel *embeddings.Kernel
 
-	tokenEmbeddingData *mps.MTLBuffer
-	tokenEmbeddingGrad *mps.MTLBuffer
+	tokenEmbeddingData unsafe.Pointer
+	tokenEmbeddingGrad unsafe.Pointer
 
-	positionEmbeddingData *mps.MTLBuffer
-
-	inputData  *mps.MTLBuffer
-	outputData *mps.MTLBuffer
-	outputGrad *mps.MTLBuffer
+	inputData  unsafe.Pointer
+	outputData unsafe.Pointer
+	outputGrad unsafe.Pointer
 
 	featuresCount int
 	contextLength int
@@ -46,13 +44,11 @@ type OpEmbeddings struct {
 
 func (op *OpEmbeddings) Forward(b *mps.MTLCommandBuffer) {
 	b.Exclusive(func() {
-		custom_kernel.CustomKernelEmbeddings(
-			op.device.CustomKernels,
+		op.kernel.Forward(
 			b.ID,
-			op.inputData.BufferID,
-			op.outputData.BufferID,
-			op.positionEmbeddingData.BufferID,
-			op.tokenEmbeddingData.BufferID,
+			op.inputData,
+			op.outputData,
+			op.tokenEmbeddingData,
 			op.featuresCount,
 			op.contextLength,
 		)
@@ -61,12 +57,11 @@ func (op *OpEmbeddings) Forward(b *mps.MTLCommandBuffer) {
 
 func (op *OpEmbeddings) Backward(b *mps.MTLCommandBuffer) {
 	b.Exclusive(func() {
-		custom_kernel.CustomKernelEmbeddingsBwd(
-			op.device.CustomKernels,
+		op.kernel.Backward(
 			b.ID,
-			op.inputData.BufferID,
-			op.outputGrad.BufferID,
-			op.tokenEmbeddingGrad.BufferID,
+			op.inputData,
+			op.outputGrad,
+			op.tokenEmbeddingGrad,
 			op.featuresCount,
 		)
 	})

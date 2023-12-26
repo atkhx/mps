@@ -54,12 +54,13 @@ kernel void addToWHD(
     device float *dstBuffer [[ buffer(0) ]],
     device float *aBuffer [[ buffer(1) ]],
     device float *bBuffer [[ buffer(2) ]],
-    constant uint& k [[ buffer(3) ]],
+    constant float& k [[ buffer(3) ]],
     constant uint& width [[ buffer(4) ]],
     constant uint& square [[ buffer(5) ]],
     const uint3 gid [[ thread_position_in_grid ]] )
 {
     uint offset = gid.z*square + gid.y*width + gid.x;
+    // dstBuffer[offset] = aBuffer[offset] + bBuffer[offset];
     dstBuffer[offset] = (k * dstBuffer[offset]) + aBuffer[offset] + bBuffer[offset];
 }
 
@@ -145,16 +146,6 @@ kernel void sumByRow(
     dstBuffer[gid.y] = sumValue;
 }
 
-kernel void nllByPos(
-    device float *dstBuffer [[ buffer(0) ]],
-    device float *smxBuffer [[ buffer(1) ]],
-    device float *tgtBuffer [[ buffer(2) ]],
-    constant uint& width [[ buffer(3) ]],
-    const uint id [[ thread_position_in_grid ]] )
-{
-    dstBuffer[id] = -log(smxBuffer[id * width + int(tgtBuffer[id])]);
-}
-
 kernel void divOnSum(
     device float *srcBuffer [[ buffer(0) ]],
     device float *dstBuffer [[ buffer(1) ]],
@@ -165,53 +156,16 @@ kernel void divOnSum(
     dstBuffer[gid.y * width+gid.x] = srcBuffer[gid.y * width+gid.x] / sumBuffer[gid.y];
 }
 
-kernel void relu(
-    device float *dstBuffer [[ buffer(0) ]],
-    device float *srcBuffer [[ buffer(1) ]],
-    const uint id [[ thread_position_in_grid ]] )
+kernel void mulAndDivOnSum(
+    device float *srcBuffer [[ buffer(0) ]],
+    device float *dstBuffer [[ buffer(1) ]],
+    device float *mulBuffer [[ buffer(2) ]],
+    device float *sumBuffer [[ buffer(3) ]],
+    constant uint& width [[ buffer(4) ]],
+    const uint2 gid [[ thread_position_in_grid ]] )
 {
-    if (srcBuffer[id] < 0) {
-        dstBuffer[id] = 0;
-    } else {
-        dstBuffer[id] = srcBuffer[id];
-    }
-}
-
-kernel void reluBwd(
-    device float *dstBuffer [[ buffer(0) ]],
-    device float *srcBuffer [[ buffer(1) ]],
-    device float *mskBuffer [[ buffer(2) ]],
-    const uint id [[ thread_position_in_grid ]] )
-{
-    if (mskBuffer[id] > 0) {
-        dstBuffer[id] += srcBuffer[id];
-    }
-}
-
-kernel void dropout(
-    device float *dstBuffer [[ buffer(0) ]],
-    device float *srcBuffer [[ buffer(1) ]],
-    device float *mskBuffer [[ buffer(2) ]],
-    constant float& probability [[ buffer(3) ]],
-    const uint id [[ thread_position_in_grid ]] )
-{
-    if (mskBuffer[id] > probability) {
-        dstBuffer[id] = srcBuffer[id];
-    } else {
-        dstBuffer[id] = 0.0;
-    }
-}
-
-kernel void dropoutBwd(
-    device float *dstBuffer [[ buffer(0) ]],
-    device float *srcBuffer [[ buffer(1) ]],
-    device float *mskBuffer [[ buffer(2) ]],
-    constant float& probability [[ buffer(3) ]],
-    const uint id [[ thread_position_in_grid ]] )
-{
-    if (mskBuffer[id] > probability) {
-        dstBuffer[id] += srcBuffer[id];
-    }
+    // dstBuffer[gid.y * width+gid.x] = mulBuffer[gid.x] * srcBuffer[gid.y * width+gid.x] / sumBuffer[gid.y];
+    dstBuffer[gid.y * width+gid.x] = srcBuffer[gid.y * width+gid.x] / sumBuffer[gid.y];
 }
 
 kernel void updateWithAdam(
@@ -282,6 +236,35 @@ kernel void softmaxBufferTrilBwd(
     }
 }
 
+kernel void nllByPos(
+    device float *dstBuffer [[ buffer(0) ]],
+    device float *smxBuffer [[ buffer(1) ]],
+    device float *tgtBuffer [[ buffer(2) ]],
+    constant uint& width [[ buffer(3) ]],
+    const uint id [[ thread_position_in_grid ]] )
+{
+    dstBuffer[id] = -log(smxBuffer[id * width + int(tgtBuffer[id])]);
+}
+
+kernel void nllByPosBwd(
+    device float *oGrad [[ buffer(0) ]],
+    device float *aGrad [[ buffer(1) ]],
+    device float *tgtBuffer [[ buffer(2) ]],
+    device float *smxBuffer [[ buffer(3) ]],
+    constant uint& chunkSize [[ buffer(4) ]],
+    const uint id [[ thread_position_in_grid ]] )
+{
+    int rowIdx = id / chunkSize;
+    float softmaxI = smxBuffer[id];
+    int tgtIndex = tgtBuffer[rowIdx];
+
+    if (id == tgtIndex + (rowIdx * chunkSize)) {
+        aGrad[id] += oGrad[rowIdx] * (softmaxI - 1.0);
+    } else {
+        aGrad[id] += oGrad[rowIdx] * (softmaxI - 0.0);
+    }
+}
+
 kernel void crossEntropyPosBwd(
     device float *oGrad [[ buffer(0) ]],
     device float *aGrad [[ buffer(1) ]],
@@ -299,93 +282,6 @@ kernel void crossEntropyPosBwd(
     } else {
         aGrad[id] += oGrad[rowIdx] * softmaxI;
     }
-}
-
-kernel void sqsByRow(
-    device float *srcBuffer [[ buffer(0) ]],
-    device float *dstBuffer [[ buffer(1) ]],
-    constant uint& width [[ buffer(2) ]],
-    const uint2 gid [[ thread_position_in_grid ]] )
-{
-    float val = 0.0;
-    for (uint i = gid.y*width; i < (gid.y+1)*width; ++i) {
-        val += srcBuffer[i] * srcBuffer[i];
-    }
-    dstBuffer[gid.y] = sqrt(1e-5 + (val/float(width)));
-}
-
-kernel void sqsGradByRow(
-    device float *aggData [[ buffer(0) ]],
-    device float *aggGrad [[ buffer(1) ]],
-    device float *outputData [[ buffer(2) ]],
-    device float *outputGrad [[ buffer(3) ]],
-    constant uint& chunkSize [[ buffer(4) ]],
-    const uint id [[ thread_position_in_grid ]] )
-{
-    float ssGrad = 0.0;
-    for (uint i = id * chunkSize; i < (id+1)*chunkSize; ++i) {
-        ssGrad -= outputGrad[i] * outputData[i];
-    }
-
-    ssGrad *= (1.0 / float(chunkSize)) / aggData[id];
-
-    aggGrad[id] = ssGrad;
-}
-
-kernel void rmsGrad(
-    device float *inputData [[ buffer(0) ]],
-    device float *inputGrad [[ buffer(1) ]],
-    device float *outputGrad [[ buffer(2) ]],
-    device float *aggData [[ buffer(3) ]],
-    device float *aggGrad [[ buffer(4) ]],
-    constant uint& chunkSize [[ buffer(5) ]],
-    const uint id [[ thread_position_in_grid ]] )
-{
-    inputGrad[id] += (outputGrad[id] + (inputData[id] * aggGrad[id / chunkSize])) / aggData[id / chunkSize];
-}
-
-kernel void meanByRows(
-    device float *srcBuffer [[ buffer(0) ]],
-    device float *dstBuffer [[ buffer(1) ]],
-    constant uint& width [[ buffer(2) ]],
-    const uint2 gid [[ thread_position_in_grid ]] )
-{
-    float sumValue = 0.0;
-    for (uint i = gid.y * width; i < (gid.y+1) * width; ++i) {
-        sumValue += srcBuffer[i];
-    }
-    dstBuffer[gid.y] = sumValue / float(width);
-}
-
-kernel void meanByRowsBwd(
-    device float *inputGrad [[ buffer(0) ]],
-    device float *outputGrad [[ buffer(1) ]],
-    constant uint& width [[ buffer(2) ]],
-    const uint id [[ thread_position_in_grid ]] )
-{
-    inputGrad[id] += outputGrad[id / width];
-}
-
-kernel void concatByRows(
-    device float *inputData [[ buffer(0) ]],
-    device float *outputData [[ buffer(1) ]],
-    constant uint& inputWidth [[ buffer(2) ]],
-    constant uint& outputWidth [[ buffer(3) ]],
-    constant uint& outputOffset [[ buffer(4) ]],
-    const uint2 gid [[ thread_position_in_grid ]] )
-{
-    outputData[(gid.y*outputWidth) + outputOffset + gid.x] = inputData[(gid.y*inputWidth) + gid.x];
-}
-
-kernel void concatByRowsBwd(
-    device float *inputGrad [[ buffer(0) ]],
-    device float *outputGrad [[ buffer(1) ]],
-    constant uint& inputWidth [[ buffer(2) ]],
-    constant uint& outputWidth [[ buffer(3) ]],
-    constant uint& outputOffset [[ buffer(4) ]],
-    const uint2 gid [[ thread_position_in_grid ]] )
-{
-    inputGrad[(gid.y*inputWidth) + gid.x] += outputGrad[(gid.y*outputWidth) + outputOffset + gid.x];
 }
 
 kernel void embeddings(

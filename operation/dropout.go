@@ -1,50 +1,84 @@
 package operation
 
-import "github.com/atkhx/mps"
+import (
+	"time"
+	"unsafe"
 
-func NewOpDropout(device *mps.MTLDevice, randomizer *mps.MatrixRandomMTGP32, inputData, inputGrad, outputData, outputGrad *mps.MTLBuffer, probability float32) *OpDropout {
+	"github.com/atkhx/mps"
+	"github.com/atkhx/mps/framework"
+	"github.com/atkhx/mps/operation/dropout"
+)
+
+func NewOpDropout(
+	device *mps.MTLDevice,
+	inputData *mps.MTLBuffer,
+	inputGrad *mps.MTLBuffer,
+	outputData *mps.MTLBuffer,
+	outputGrad *mps.MTLBuffer,
+	probability float32,
+) *OpDropout {
+	distribution := device.CreateMatrixRandomDistribution(0, 1)
+	randomizer := device.CreateMatrixRandomMTGP32(distribution, uint64(time.Now().UnixNano()))
+
 	maskBuffer := device.CreateBufferWithLength(inputData.Length)
 	maskMatrix := maskBuffer.CreateMatrix(inputData.Length, 1, 0)
 
 	return &OpDropout{
-		device:     device,
+		kernel: dropout.New(device.DeviceID),
+
 		randomizer: randomizer,
 
-		maskBuffer: maskBuffer,
+		maskBuffer: maskBuffer.BufferID,
 		maskMatrix: maskMatrix,
 
-		inputData: inputData,
-		inputGrad: inputGrad,
+		inputData: inputData.BufferID,
+		inputGrad: inputGrad.BufferID,
 
-		outputData: outputData,
-		outputGrad: outputGrad,
+		outputData: outputData.BufferID,
+		outputGrad: outputGrad.BufferID,
 
 		probability: probability,
 	}
 }
 
 type OpDropout struct {
-	device *mps.MTLDevice
-
+	kernel     *dropout.Kernel
 	randomizer *mps.MatrixRandomMTGP32
 
-	maskBuffer *mps.MTLBuffer
+	maskBuffer unsafe.Pointer
 	maskMatrix *mps.MPSMatrix
 
-	inputData *mps.MTLBuffer
-	inputGrad *mps.MTLBuffer
+	inputData unsafe.Pointer
+	inputGrad unsafe.Pointer
 
-	outputData *mps.MTLBuffer
-	outputGrad *mps.MTLBuffer
+	outputData unsafe.Pointer
+	outputGrad unsafe.Pointer
 
 	probability float32
 }
 
 func (op *OpDropout) Forward(b *mps.MTLCommandBuffer) {
-	b.MPSMatrixRandomMTGP32Encode(op.randomizer, op.maskMatrix)
-	b.DropoutBuffer(op.outputData, op.inputData, op.maskBuffer, op.probability)
+	b.Exclusive(func() {
+		framework.MPSMatrixRandomMTGP32Encode(op.randomizer.ID, b.ID, op.maskMatrix.MatrixID)
+
+		op.kernel.Forward(
+			b.ID,
+			op.inputData,
+			op.outputData,
+			op.maskBuffer,
+			op.probability,
+		)
+	})
 }
 
 func (op *OpDropout) Backward(b *mps.MTLCommandBuffer) {
-	b.DropoutBwdBuffer(op.inputGrad, op.outputGrad, op.maskBuffer, op.probability)
+	b.Exclusive(func() {
+		op.kernel.Backward(
+			b.ID,
+			op.inputGrad,
+			op.outputGrad,
+			op.maskBuffer,
+			op.probability,
+		)
+	})
 }

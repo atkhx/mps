@@ -9,7 +9,7 @@ import (
 
 func NewMTLCommandQueue(device *MTLDevice) *MTLCommandQueue {
 	return &MTLCommandQueue{
-		queueID: framework.MTLCommandQueueCreate(device.deviceID),
+		queueID: framework.MTLCommandQueueCreate(device.DeviceID),
 		device:  device,
 	}
 }

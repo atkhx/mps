@@ -1,30 +1,32 @@
 package operation
 
 import (
+	"unsafe"
+
 	"github.com/atkhx/mps"
-	"github.com/atkhx/mps/custom-kernel"
+	"github.com/atkhx/mps/operation/transpose"
 )
 
 func NewOpTranspose(device *mps.MTLDevice, inputData, inputGrad, outputData, outputGrad *mps.MTLBuffer, width, height int) *OpTranspose {
 	return &OpTranspose{
-		device:     device,
-		inputData:  inputData,
-		inputGrad:  inputGrad,
-		outputData: outputData,
-		outputGrad: outputGrad,
+		kernel:     transpose.New(device.DeviceID),
+		inputData:  inputData.BufferID,
+		inputGrad:  inputGrad.BufferID,
+		outputData: outputData.BufferID,
+		outputGrad: outputGrad.BufferID,
 		width:      width,
 		height:     height,
 	}
 }
 
 type OpTranspose struct {
-	device *mps.MTLDevice
+	kernel *transpose.Kernel
 
-	inputData *mps.MTLBuffer
-	inputGrad *mps.MTLBuffer
+	inputData unsafe.Pointer
+	inputGrad unsafe.Pointer
 
-	outputData *mps.MTLBuffer
-	outputGrad *mps.MTLBuffer
+	outputData unsafe.Pointer
+	outputGrad unsafe.Pointer
 
 	width  int
 	height int
@@ -32,11 +34,10 @@ type OpTranspose struct {
 
 func (op *OpTranspose) Forward(b *mps.MTLCommandBuffer) {
 	b.Exclusive(func() {
-		custom_kernel.TransposeTo(
-			op.device.CustomKernels,
+		op.kernel.Forward(
 			b.ID,
-			op.inputData.BufferID,
-			op.outputData.BufferID,
+			op.inputData,
+			op.outputData,
 			op.width,
 			op.height,
 		)
@@ -45,11 +46,10 @@ func (op *OpTranspose) Forward(b *mps.MTLCommandBuffer) {
 
 func (op *OpTranspose) Backward(b *mps.MTLCommandBuffer) {
 	b.Exclusive(func() {
-		custom_kernel.TransposeAndAddTo(
-			op.device.CustomKernels,
+		op.kernel.Backward(
 			b.ID,
-			op.outputGrad.BufferID,
-			op.inputGrad.BufferID,
+			op.inputGrad,
+			op.outputGrad,
 			op.width,
 			op.height,
 		)

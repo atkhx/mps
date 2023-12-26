@@ -70,15 +70,6 @@
         srcOffset:(uint)srcOffset
         length:(uint)length;
 
-- (void) relu:(id<MTLCommandBuffer>)commandBuffer
-        dstBuffer:(id<MTLBuffer>)dstBuffer
-        srcBuffer:(id<MTLBuffer>)srcBuffer;
-
-- (void)reluBwd:(id<MTLCommandBuffer>)commandBuffer
-        dstBuffer:(id<MTLBuffer>)dstBuffer
-        srcBuffer:(id<MTLBuffer>)srcBuffer
-        mskBuffer:(id<MTLBuffer>)mskBuffer;
-
 - (void) exp:(id<MTLCommandBuffer>)commandBuffer
         dstBuffer:(id<MTLBuffer>)dstBuffer
         srcBuffer:(id<MTLBuffer>)srcBuffer
@@ -109,18 +100,6 @@
         rowsCount:(uint)rowsCount
         offset:(uint)offset;
 
-- (void) dropout:(id<MTLCommandBuffer>)commandBuffer
-        dstBuffer:(id<MTLBuffer>)dstBuffer
-        srcBuffer:(id<MTLBuffer>)srcBuffer
-        mskBuffer:(id<MTLBuffer>)mskBuffer
-        probability:(float)probability;
-
-- (void) dropoutBwd:(id<MTLBuffer>)dstBuffer
-        srcBuffer:(id<MTLBuffer>)srcBuffer
-        mskBuffer:(id<MTLBuffer>)mskBuffer
-        probability:(float)probability
-        withCommandBuffer:(id<MTLCommandBuffer>)commandBuffer;
-
 - (void) updateWithAdam:(id<MTLCommandBuffer>)commandBuffer
         dataBuffer:(id<MTLBuffer>)dataBuffer
         gradBuffer:(id<MTLBuffer>)gradBuffer
@@ -146,6 +125,18 @@
         rowsCount:(uint)rowsCount
         offset:(uint)offset;
 
+- (void) nllByPos:(id<MTLCommandBuffer>)commandBuffer
+        dstBuffer:(id<MTLBuffer>)dstBuffer
+        smxBuffer:(id<MTLBuffer>)smxBuffer
+        tgtBuffer:(id<MTLBuffer>)tgtBuffer
+        chunkSize:(uint)chunkSize;
+
+- (void) nllByPosBwd:(id<MTLCommandBuffer>)commandBuffer
+        oGrad:(id<MTLBuffer>)oGrad
+        aGrad:(id<MTLBuffer>)aGrad
+        tgtBuffer:(id<MTLBuffer>)tgtBuffer
+        smxBuffer:(id<MTLBuffer>)smxBuffer
+        chunkSize:(uint)chunkSize;
 
 - (void) crossEntropyPos:(id<MTLCommandBuffer>)commandBuffer
         dstBuffer:(id<MTLBuffer>)dstBuffer
@@ -161,59 +152,6 @@
         tgtBuffer:(id<MTLBuffer>)tgtBuffer
         smxBuffer:(id<MTLBuffer>)smxBuffer
         chunkSize:(uint)chunkSize;
-
-- (void) rmsNorm:(id<MTLCommandBuffer>)commandBuffer
-        dstBuffer:(id<MTLBuffer>)dstBuffer
-        srcBuffer:(id<MTLBuffer>)srcBuffer
-        sumBuffer:(id<MTLBuffer>)sumBuffer
-        chunkSize:(uint)chunkSize;
-
-- (void) rmsNormBwd:(id<MTLCommandBuffer>)commandBuffer
-        inputData:(id<MTLBuffer>)inputData
-        inputGrad:(id<MTLBuffer>)inputGrad
-        outputData:(id<MTLBuffer>)outputData
-        outputGrad:(id<MTLBuffer>)outputGrad
-        aggData:(id<MTLBuffer>)aggData
-        aggGrad:(id<MTLBuffer>)aggGrad
-        chunkSize:(uint)chunkSize;
-
-- (void) meanByRows:(id<MTLCommandBuffer>)commandBuffer
-        inputData:(id<MTLBuffer>)inputData
-        outputData:(id<MTLBuffer>)outputData
-        chunkSize:(uint)chunkSize;
-
-- (void) meanByRowsBwd:(id<MTLCommandBuffer>)commandBuffer
-        inputGrad:(id<MTLBuffer>)inputGrad
-        outputGrad:(id<MTLBuffer>)outputGrad
-        chunkSize:(uint)chunkSize;
-
-- (void) concatByRows:(id<MTLCommandBuffer>)commandBuffer
-        inputData:(id<MTLBuffer>)inputData
-        outputData:(id<MTLBuffer>)outputData
-        inputWidth:(uint)inputWidth
-        outputWidth:(uint)outputWidth
-        outputOffset:(uint)outputOffset;
-
-- (void) concatByRowsBwd:(id<MTLCommandBuffer>)commandBuffer
-        inputGrad:(id<MTLBuffer>)inputGrad
-        outputGrad:(id<MTLBuffer>)outputGrad
-        inputWidth:(uint)inputWidth
-        outputWidth:(uint)outputWidth
-        outputOffset:(uint)outputOffset;
-
-- (void) embeddings:(id<MTLCommandBuffer>)commandBuffer
-        inputData:(id<MTLBuffer>)inputData
-        outputData:(id<MTLBuffer>)outputData
-        posEmbedding:(id<MTLBuffer>)posEmbedding
-        tokenEmbedding:(id<MTLBuffer>)tokenEmbedding
-        featuresCount:(uint)featuresCount
-        contextLength:(uint)contextLength;
-
-- (void) embeddingsBwd:(id<MTLCommandBuffer>)commandBuffer
-        inputData:(id<MTLBuffer>)inputData
-        outputGrad:(id<MTLBuffer>)outputGrad
-        tokenEmbeddingGrad:(id<MTLBuffer>)tokenEmbeddingGrad
-        featuresCount:(uint)featuresCount;
 
 - (void) transposeTo:(id<MTLCommandBuffer>)commandBuffer
         inputData:(id<MTLBuffer>)inputData

@@ -11,17 +11,17 @@ func NewMPSMatrix(bufferID unsafe.Pointer, cols, rows, batchSize, batchStride, o
 	matrixID := framework.MPSMatrixCreate(bufferID, descriptorID, offset)
 
 	return &MPSMatrix{
-		matrixID:     matrixID,
-		descriptorID: descriptorID,
+		MatrixID:     matrixID,
+		DescriptorID: descriptorID,
 	}
 }
 
 type MPSMatrix struct {
-	matrixID     unsafe.Pointer
-	descriptorID unsafe.Pointer
+	MatrixID     unsafe.Pointer
+	DescriptorID unsafe.Pointer
 }
 
 func (m *MPSMatrix) Release() {
-	framework.MPSMatrixDescriptorRelease(m.descriptorID)
-	framework.MPSMatrixRelease(m.matrixID)
+	framework.MPSMatrixDescriptorRelease(m.DescriptorID)
+	framework.MPSMatrixRelease(m.MatrixID)
 }

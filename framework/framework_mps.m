@@ -90,3 +90,40 @@ void mpsMatrixRandomMTGP32Encode(void *kernelID, void *commandBufferID, void *ds
         encodeToCommandBuffer:(id<MTLCommandBuffer>)commandBufferID
         destinationMatrix:(__bridge MPSMatrix*)dstMatrix];
 }
+
+// MPSMatrixSoftMax
+
+void* mpsMatrixSoftMaxCreate(void *deviceID) {
+    return [[MPSMatrixSoftMax alloc] initWithDevice:(id<MTLDevice>)deviceID];
+}
+
+void mpsMatrixSoftMaxEncode(
+    void *commandBufferID,
+    void *kernelID,
+    void *inputMatrix,
+    void *resultMatrix
+) {
+    [(__bridge MPSMatrixSoftMax*)kernelID encodeToCommandBuffer:(id<MTLCommandBuffer>)commandBufferID
+        inputMatrix:(__bridge MPSMatrix*)inputMatrix
+        resultMatrix:(__bridge MPSMatrix*)resultMatrix];
+}
+
+// MPSMatrixSoftMaxGradient
+
+void* mpsMatrixSoftMaxGradientCreate(void *deviceID) {
+    return [[MPSMatrixSoftMaxGradient alloc] initWithDevice:(id<MTLDevice>)deviceID];
+}
+
+void mpsMatrixSoftMaxGradientEncode(
+    void *commandBufferID,
+    void *kernelID,
+    void *gradientMatrix,
+    void *forwardOutputMatrix,
+    void *resultMatrix
+) {
+    [(__bridge MPSMatrixSoftMaxGradient*)kernelID encodeToCommandBuffer:(id<MTLCommandBuffer>)commandBufferID
+        gradientMatrix:(__bridge MPSMatrix*)gradientMatrix
+        forwardOutputMatrix:(__bridge MPSMatrix*)forwardOutputMatrix
+        resultMatrix:(__bridge MPSMatrix*)resultMatrix];
+}
+

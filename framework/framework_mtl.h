@@ -18,8 +18,24 @@ void mtlCommandBufferCommitAndWaitUntilCompleted(void *commandBufferID);
 
 // MTLBuffer
 
-void* mtlBufferCreateCreateWithBytes(void *deviceID, float *bytes, size_t length);
+void* mtlBufferCreateWithBytes(void *deviceID, float *bytes, size_t length);
 void* mtlBufferCreateWithLength(void *deviceID, size_t length);
+
+void* mtlBufferCreatePrivateWithBytes(void *deviceID, float *bytes, size_t length);
 void* mtlBufferCreatePrivateWithLength(void *deviceID, size_t length);
+
 void* mtlBufferGetContents(void *bufferID);
 void mtlBufferRelease(void *bufferID);
+void mtlCopyToBuffer(
+    void *deviceID,
+    void *srcBufferID,
+    void *dstBufferID,
+    size_t bufferSize
+);
+
+void mtlCopyToBufferWithCommandBuffer(
+    void *commandBufferID,
+    void *srcBufferID,
+    void *dstBufferID,
+    size_t bufferSize
+);

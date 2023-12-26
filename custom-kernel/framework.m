@@ -157,30 +157,6 @@ void customKernelMul(
         length:length];
 }
 
-void customKernelReLU(
-    void *kernelID,
-    void *commandBufferID,
-    void *dstBufferID,
-    void *srcBufferID
-) {
-    [(__bridge MPSCustomKernelImpl*)kernelID relu:(id<MTLCommandBuffer>)commandBufferID
-        dstBuffer:(id<MTLBuffer>)dstBufferID
-        srcBuffer:(id<MTLBuffer>)srcBufferID];
-}
-
-void customKernelReLUBwd(
-    void *kernelID,
-    void *commandBufferID,
-    void *dstBufferID,
-    void *srcBufferID,
-    void *mskBufferID
-) {
-    [(__bridge MPSCustomKernelImpl*)kernelID reluBwd:(id<MTLCommandBuffer>)commandBufferID
-        dstBuffer:(id<MTLBuffer>)dstBufferID
-        srcBuffer:(id<MTLBuffer>)srcBufferID
-        mskBuffer:(id<MTLBuffer>)mskBufferID];
-}
-
 void customKernelSoftmax(
     void *kernelID,
     void *commandBufferID,
@@ -198,37 +174,6 @@ void customKernelSoftmax(
         colsCount:colsCount
         rowsCount:rowsCount
         offset:offset];
-}
-
-void customKernelDropout(
-    void *kernelID,
-    void *commandBufferID,
-    void *dstBufferID,
-    void *srcBufferID,
-    void *mskBufferID,
-    float probability
-) {
-    [(__bridge MPSCustomKernelImpl*)kernelID dropout:(id<MTLCommandBuffer>)commandBufferID
-        dstBuffer:(id<MTLBuffer>)dstBufferID
-        srcBuffer:(id<MTLBuffer>)srcBufferID
-        mskBuffer:(id<MTLBuffer>)mskBufferID
-        probability:probability];
-}
-
-void customKernelDropoutBwd(
-    void *kernelID,
-    void *commandBufferID,
-    void *dstBufferID,
-    void *srcBufferID,
-    void *mskBufferID,
-    float probability
-) {
-    [(__bridge MPSCustomKernelImpl*)kernelID
-        dropoutBwd:(id<MTLBuffer>)dstBufferID
-        srcBuffer:(id<MTLBuffer>)srcBufferID
-        mskBuffer:(id<MTLBuffer>)mskBufferID
-        probability:probability
-        withCommandBuffer:(id<MTLCommandBuffer>)commandBufferID];
 }
 
 void customKernelUpdateWithAdam(
@@ -290,6 +235,38 @@ void customKernelSoftmaxTrilBwd(
         offset:offset];
 }
 
+void customKernelNLLByPos(
+    void *kernelID,
+    void *commandBufferID,
+    void *dstBuffer,
+    void *smxBuffer,
+    void *tgtBuffer,
+    uint chunkSize
+) {
+    [(__bridge MPSCustomKernelImpl*)kernelID nllByPos:(id<MTLCommandBuffer>)commandBufferID
+        dstBuffer:(id<MTLBuffer>)dstBuffer
+        smxBuffer:(id<MTLBuffer>)smxBuffer
+        tgtBuffer:(id<MTLBuffer>)tgtBuffer
+        chunkSize:chunkSize];
+}
+
+void customKernelNLLByPosBwd(
+    void *kernelID,
+    void *commandBufferID,
+    void *oGradBufferID,
+    void *aGradBufferID,
+    void *tgtBufferID,
+    void *smxBufferID,
+    uint chunkSize
+) {
+    [(__bridge MPSCustomKernelImpl*)kernelID nllByPosBwd:(id<MTLCommandBuffer>)commandBufferID
+        oGrad:(id<MTLBuffer>)oGradBufferID
+        aGrad:(id<MTLBuffer>)aGradBufferID
+        tgtBuffer:(id<MTLBuffer>)tgtBufferID
+        smxBuffer:(id<MTLBuffer>)smxBufferID
+        chunkSize:chunkSize];
+}
+
 void customKernelCrossEntropyPos(
     void *kernelID,
     void *commandBufferID,
@@ -324,136 +301,6 @@ void customKernelCrossEntropyPosBwd(
         tgtBuffer:(id<MTLBuffer>)tgtBufferID
         smxBuffer:(id<MTLBuffer>)smxBufferID
         chunkSize:chunkSize];
-}
-
-void customKernelRMSNorm(
-    void *kernelID,
-    void *commandBufferID,
-    void *dstBufferID,
-    void *srcBufferID,
-    void *sumBufferID,
-    uint chunkSize
-) {
-    [(__bridge MPSCustomKernelImpl*)kernelID rmsNorm:(id<MTLCommandBuffer>)commandBufferID
-        dstBuffer:(id<MTLBuffer>)dstBufferID
-        srcBuffer:(id<MTLBuffer>)srcBufferID
-        sumBuffer:(id<MTLBuffer>)sumBufferID
-        chunkSize:chunkSize];
-}
-
-void customKernelRMSNormBwd(
-    void *kernelID,
-    void *commandBufferID,
-    void *inputDataBufferID,
-    void *inputGradBufferID,
-    void *outputDataBufferID,
-    void *outputGradBufferID,
-    void *aggDataBufferID,
-    void *aggGradBufferID,
-    uint chunkSize
-) {
-    [(__bridge MPSCustomKernelImpl*)kernelID rmsNormBwd:(id<MTLCommandBuffer>)commandBufferID
-        inputData:(id<MTLBuffer>)inputDataBufferID
-        inputGrad:(id<MTLBuffer>)inputGradBufferID
-        outputData:(id<MTLBuffer>)outputDataBufferID
-        outputGrad:(id<MTLBuffer>)outputGradBufferID
-        aggData:(id<MTLBuffer>)aggDataBufferID
-        aggGrad:(id<MTLBuffer>)aggGradBufferID
-        chunkSize:chunkSize];
-}
-
-void customKernelMeanByRows(
-    void *kernelID,
-    void *commandBufferID,
-    void *inputDataBufferID,
-    void *outputDataBufferID,
-    uint chunkSize
-) {
-    [(__bridge MPSCustomKernelImpl*)kernelID meanByRows:(id<MTLCommandBuffer>)commandBufferID
-        inputData:(id<MTLBuffer>)inputDataBufferID
-        outputData:(id<MTLBuffer>)outputDataBufferID
-        chunkSize:chunkSize];
-}
-
-void customKernelMeanByRowsBwd(
-    void *kernelID,
-    void *commandBufferID,
-    void *inputGradBufferID,
-    void *outputGradBufferID,
-    uint chunkSize
-) {
-    [(__bridge MPSCustomKernelImpl*)kernelID meanByRowsBwd:(id<MTLCommandBuffer>)commandBufferID
-        inputGrad:(id<MTLBuffer>)inputGradBufferID
-        outputGrad:(id<MTLBuffer>)outputGradBufferID
-        chunkSize:chunkSize];
-}
-
-void customKernelConcatByRows(
-    void *kernelID,
-    void *commandBufferID,
-    void *inputDataBufferID,
-    void *outputDataBufferID,
-    uint inputWidth,
-    uint outputWidth,
-    uint outputOffset
-) {
-    [(__bridge MPSCustomKernelImpl*)kernelID concatByRows:(id<MTLCommandBuffer>)commandBufferID
-        inputData:(id<MTLBuffer>)inputDataBufferID
-        outputData:(id<MTLBuffer>)outputDataBufferID
-        inputWidth:inputWidth
-        outputWidth:outputWidth
-        outputOffset:outputOffset];
-}
-
-void customKernelConcatByRowsBwd(
-    void *kernelID,
-    void *commandBufferID,
-    void *inputGradBufferID,
-    void *outputGradBufferID,
-    uint inputWidth,
-    uint outputWidth,
-    uint outputOffset
-) {
-    [(__bridge MPSCustomKernelImpl*)kernelID concatByRowsBwd:(id<MTLCommandBuffer>)commandBufferID
-        inputGrad:(id<MTLBuffer>)inputGradBufferID
-        outputGrad:(id<MTLBuffer>)outputGradBufferID
-        inputWidth:inputWidth
-        outputWidth:outputWidth
-        outputOffset:outputOffset];
-}
-
-void customKernelEmbeddings(
-    void *kernelID,
-    void *commandBufferID,
-    void *inputDataBufferID,
-    void *outputDataBufferID,
-    void *posEmbeddingBufferID,
-    void *tokenEmbeddingBufferID,
-    uint featuresCount,
-    uint contextLength
-) {
-    [(__bridge MPSCustomKernelImpl*)kernelID embeddings:(id<MTLCommandBuffer>)commandBufferID
-        inputData:(id<MTLBuffer>)inputDataBufferID
-        outputData:(id<MTLBuffer>)outputDataBufferID
-        posEmbedding:(id<MTLBuffer>)posEmbeddingBufferID
-        tokenEmbedding:(id<MTLBuffer>)tokenEmbeddingBufferID
-        featuresCount:featuresCount
-        contextLength:contextLength];
-}
-
-void customKernelEmbeddingsBwd(
-    void *kernelID,
-    void *commandBufferID,
-    void *inputDataBufferID,
-    void *outputGradBufferID,
-    void *tokenEmbeddingGradBufferID,
-    uint featuresCount
-) {
-    [(__bridge MPSCustomKernelImpl*)kernelID embeddingsBwd:(id<MTLCommandBuffer>)commandBufferID
-        inputData:(id<MTLBuffer>)inputDataBufferID
-        outputGrad:(id<MTLBuffer>)outputGradBufferID
-        tokenEmbeddingGrad:(id<MTLBuffer>)tokenEmbeddingGradBufferID
-        featuresCount:featuresCount];
 }
 
 void transposeTo(
