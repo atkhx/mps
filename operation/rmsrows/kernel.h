@@ -1,10 +1,10 @@
-#ifndef RMSNormKernel_h
-#define RMSNormKernel_h
+#ifndef RmsRowsKernel_h
+#define RmsRowsKernel_h
 
 #import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
 
-@protocol RMSNormKernel <NSObject>
+@protocol RmsRowsKernel <NSObject>
 
 - (instancetype) initWithDevice:(id<MTLDevice>)device kernelSource:(NSString*)kernelSource;
 
@@ -26,8 +26,8 @@
 @end
 
 
-@interface RMSNormKernelImpl : NSObject <RMSNormKernel>
+@interface RmsRowsKernelImpl : NSObject <RmsRowsKernel>
     @property (nonatomic, strong) id<MTLLibrary> library;
 @end
 
-#endif /* RMSNormKernel_h */
+#endif /* RmsRowsKernel_h */

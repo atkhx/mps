@@ -2,7 +2,7 @@
 #import <Foundation/Foundation.h>
 #include <stdio.h>
 
-@implementation RMSNormKernelImpl {
+@implementation RmsRowsKernelImpl {
     id<MTLDevice> _device;
 
     id<MTLComputePipelineState> _rmsByRowsPSO;

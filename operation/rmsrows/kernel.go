@@ -1,4 +1,4 @@
-package rmsnorm
+package rmsrows
 
 /*
 #cgo CFLAGS: -x objective-c
@@ -6,12 +6,12 @@ package rmsnorm
 
 #include "kernel.h"
 
-void* rmsNormKernelCreate(void *device, const char *kernelSource) {
-    return [[RMSNormKernelImpl alloc] initWithDevice:(id<MTLDevice>)device
+void* rmsRowsKernelCreate(void *device, const char *kernelSource) {
+    return [[RmsRowsKernelImpl alloc] initWithDevice:(id<MTLDevice>)device
 		kernelSource:[NSString stringWithUTF8String:kernelSource]];
 }
 
-void rmsNormForward(
+void rmsRowsForward(
     void *kernel,
     void *commandBuffer,
     void *inputData,
@@ -19,14 +19,14 @@ void rmsNormForward(
     void *aggData,
     uint chunkSize
 ) {
-    [(__bridge RMSNormKernelImpl*)kernel forward:(id<MTLCommandBuffer>)commandBuffer
+    [(__bridge RmsRowsKernelImpl*)kernel forward:(id<MTLCommandBuffer>)commandBuffer
         inputData:(id<MTLBuffer>)inputData
         outputData:(id<MTLBuffer>)outputData
         aggData:(id<MTLBuffer>)aggData
         chunkSize:chunkSize];
 }
 
-void rmsNormBackward(
+void rmsRowsBackward(
     void *kernel,
     void *commandBuffer,
     void *inputData,
@@ -37,7 +37,7 @@ void rmsNormBackward(
     void *aggGrad,
     uint chunkSize
 ) {
-    [(__bridge RMSNormKernelImpl*)kernel backward:(id<MTLCommandBuffer>)commandBuffer
+    [(__bridge RmsRowsKernelImpl*)kernel backward:(id<MTLCommandBuffer>)commandBuffer
         inputData:(id<MTLBuffer>)inputData
         inputGrad:(id<MTLBuffer>)inputGrad
         outputData:(id<MTLBuffer>)outputData
@@ -61,7 +61,7 @@ func New(deviceID unsafe.Pointer) *Kernel {
 	defer C.free(unsafe.Pointer(cKernelString))
 	return &Kernel{
 		deviceID: deviceID,
-		kernelID: C.rmsNormKernelCreate(deviceID, cKernelString),
+		kernelID: C.rmsRowsKernelCreate(deviceID, cKernelString),
 	}
 }
 
@@ -77,7 +77,7 @@ func (k *Kernel) Forward(
 	aggData unsafe.Pointer,
 	chunkSize int,
 ) {
-	C.rmsNormForward(
+	C.rmsRowsForward(
 		k.kernelID,
 		commandBufferID,
 		inputData,
@@ -97,7 +97,7 @@ func (k *Kernel) Backward(
 	aggGrad unsafe.Pointer,
 	chunkSize int,
 ) {
-	C.rmsNormBackward(
+	C.rmsRowsBackward(
 		k.kernelID,
 		commandBufferID,
 		inputData,
