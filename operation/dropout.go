@@ -28,7 +28,7 @@ func NewOpDropout(
 
 		randomizer: randomizer,
 
-		maskBuffer: maskBuffer.BufferID,
+		maskBuffer: maskBuffer,
 		maskMatrix: maskMatrix,
 
 		inputData: inputData.BufferID,
@@ -45,7 +45,7 @@ type OpDropout struct {
 	kernel     *dropout.Kernel
 	randomizer *mps.MatrixRandomMTGP32
 
-	maskBuffer unsafe.Pointer
+	maskBuffer *mps.MTLBuffer
 	maskMatrix *mps.MPSMatrix
 
 	inputData unsafe.Pointer
@@ -65,7 +65,7 @@ func (op *OpDropout) Forward(b *mps.MTLCommandBuffer) {
 			b.ID,
 			op.inputData,
 			op.outputData,
-			op.maskBuffer,
+			op.maskBuffer.BufferID,
 			op.probability,
 		)
 	})
@@ -77,7 +77,7 @@ func (op *OpDropout) Backward(b *mps.MTLCommandBuffer) {
 			b.ID,
 			op.inputGrad,
 			op.outputGrad,
-			op.maskBuffer,
+			op.maskBuffer.BufferID,
 			op.probability,
 		)
 	})
