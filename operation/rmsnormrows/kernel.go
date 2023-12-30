@@ -1,4 +1,4 @@
-package softmaxtril
+package rmsnormrows
 
 /*
 #cgo CFLAGS: -x objective-c
@@ -6,47 +6,46 @@ package softmaxtril
 
 #include "kernel.h"
 
-void* softmaxtrilKernelCreate(void *device, const char *kernelSource) {
-    return [[SoftmaxtrilKernelImpl alloc] initWithDevice:(id<MTLDevice>)device
+void* RmsNormRowsKernelCreate(void *device, const char *kernelSource) {
+    return [[RmsNormRowsKernelImpl alloc] initWithDevice:(id<MTLDevice>)device
 		kernelSource:[NSString stringWithUTF8String:kernelSource]];
 }
 
-void softmaxtrilForward(
+void rmsRowsForward(
     void *kernel,
     void *commandBuffer,
     void *inputData,
     void *outputData,
-	uint colsCount,
-	uint rowsCount
+    void *rmsData,
+    uint chunkSize
 ) {
-
-    [(__bridge SoftmaxtrilKernelImpl*)kernel forward:(id<MTLCommandBuffer>)commandBuffer
+    [(__bridge RmsNormRowsKernelImpl*)kernel forward:(id<MTLCommandBuffer>)commandBuffer
         inputData:(id<MTLBuffer>)inputData
         outputData:(id<MTLBuffer>)outputData
-        colsCount:(uint)colsCount
-        rowsCount:(uint)rowsCount
-	];
+        rmsData:(id<MTLBuffer>)rmsData
+        chunkSize:chunkSize];
 }
 
-void softmaxtrilBackward(
+void rmsRowsBackward(
     void *kernel,
     void *commandBuffer,
+    void *inputData,
     void *inputGrad,
-    void *outputGrad,
     void *outputData,
-	uint colsCount,
-	uint rowsCount
-
+    void *outputGrad,
+    void *rmsData,
+    void *rmsGrad,
+    uint chunkSize
 ) {
-    [(__bridge SoftmaxtrilKernelImpl*)kernel backward:(id<MTLCommandBuffer>)commandBuffer
+    [(__bridge RmsNormRowsKernelImpl*)kernel backward:(id<MTLCommandBuffer>)commandBuffer
+        inputData:(id<MTLBuffer>)inputData
         inputGrad:(id<MTLBuffer>)inputGrad
-        outputGrad:(id<MTLBuffer>)outputGrad
         outputData:(id<MTLBuffer>)outputData
-        colsCount:(uint)colsCount
-        rowsCount:(uint)rowsCount
-	];
+        outputGrad:(id<MTLBuffer>)outputGrad
+        rmsData:(id<MTLBuffer>)rmsData
+        rmsGrad:(id<MTLBuffer>)rmsGrad
+        chunkSize:chunkSize];
 }
-
 */
 import "C"
 import (
@@ -62,7 +61,7 @@ func New(deviceID unsafe.Pointer) *Kernel {
 	defer C.free(unsafe.Pointer(cKernelString))
 	return &Kernel{
 		deviceID: deviceID,
-		kernelID: C.softmaxtrilKernelCreate(deviceID, cKernelString),
+		kernelID: C.RmsNormRowsKernelCreate(deviceID, cKernelString),
 	}
 }
 
@@ -75,34 +74,38 @@ func (k *Kernel) Forward(
 	commandBufferID unsafe.Pointer,
 	inputData unsafe.Pointer,
 	outputData unsafe.Pointer,
-	colsCount int,
-	rowsCount int,
+	rmsData unsafe.Pointer,
+	chunkSize int,
 ) {
-	C.softmaxtrilForward(
+	C.rmsRowsForward(
 		k.kernelID,
 		commandBufferID,
 		inputData,
 		outputData,
-		C.uint(colsCount),
-		C.uint(rowsCount),
+		rmsData,
+		C.uint(chunkSize),
 	)
 }
 
 func (k *Kernel) Backward(
 	commandBufferID unsafe.Pointer,
+	inputData unsafe.Pointer,
 	inputGrad unsafe.Pointer,
-	outputGrad unsafe.Pointer,
 	outputData unsafe.Pointer,
-	colsCount int,
-	rowsCount int,
+	outputGrad unsafe.Pointer,
+	rmsData unsafe.Pointer,
+	rmsGrad unsafe.Pointer,
+	chunkSize int,
 ) {
-	C.softmaxtrilBackward(
+	C.rmsRowsBackward(
 		k.kernelID,
 		commandBufferID,
+		inputData,
 		inputGrad,
-		outputGrad,
 		outputData,
-		C.uint(colsCount),
-		C.uint(rowsCount),
+		outputGrad,
+		rmsData,
+		rmsGrad,
+		C.uint(chunkSize),
 	)
 }

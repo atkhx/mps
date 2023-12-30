@@ -3,22 +3,27 @@ package operation
 import "C"
 import (
 	"github.com/atkhx/mps"
-	"github.com/atkhx/mps/operation/rmsrows"
+	"github.com/atkhx/mps/operation/rmsnormrows"
 )
 
-func NewOpRMSByRows(
+func NewOpRMSNormByRows(
 	device *mps.MTLDevice,
 	inputData *mps.MTLBuffer,
 	inputGrad *mps.MTLBuffer,
 	outputData *mps.MTLBuffer,
 	outputGrad *mps.MTLBuffer,
 	chunkSize int,
-) *OpRMSByRows {
-	kernel := rmsrows.New(device.DeviceID)
+) *OpRMSNormByRows {
+	rmsData := device.CreateBufferWithLength(inputData.Length / chunkSize)
+	rmsGrad := device.CreateBufferWithLength(inputData.Length / chunkSize)
 
-	return &OpRMSByRows{
+	kernel := rmsnormrows.New(device.DeviceID)
+
+	return &OpRMSNormByRows{
 		device:     device,
 		kernel:     kernel,
+		rmsData:    rmsData,
+		rmsGrad:    rmsGrad,
 		inputData:  inputData,
 		inputGrad:  inputGrad,
 		outputData: outputData,
@@ -27,9 +32,9 @@ func NewOpRMSByRows(
 	}
 }
 
-type OpRMSByRows struct {
+type OpRMSNormByRows struct {
 	device *mps.MTLDevice
-	kernel *rmsrows.Kernel
+	kernel *rmsnormrows.Kernel
 
 	inputData *mps.MTLBuffer
 	inputGrad *mps.MTLBuffer
@@ -37,28 +42,34 @@ type OpRMSByRows struct {
 	outputData *mps.MTLBuffer
 	outputGrad *mps.MTLBuffer
 
+	rmsData *mps.MTLBuffer
+	rmsGrad *mps.MTLBuffer
+
 	chunkSize int
 }
 
-func (op *OpRMSByRows) Forward(b *mps.MTLCommandBuffer) {
+func (op *OpRMSNormByRows) Forward(b *mps.MTLCommandBuffer) {
 	b.Exclusive(func() {
 		op.kernel.Forward(
 			b.ID,
 			op.inputData.BufferID,
 			op.outputData.BufferID,
+			op.rmsData.BufferID,
 			op.chunkSize,
 		)
 	})
 }
 
-func (op *OpRMSByRows) Backward(b *mps.MTLCommandBuffer) {
+func (op *OpRMSNormByRows) Backward(b *mps.MTLCommandBuffer) {
 	b.Exclusive(func() {
 		op.kernel.Backward(
 			b.ID,
 			op.inputData.BufferID,
-			op.outputData.BufferID,
 			op.inputGrad.BufferID,
+			op.outputData.BufferID,
 			op.outputGrad.BufferID,
+			op.rmsData.BufferID,
+			op.rmsGrad.BufferID,
 			op.chunkSize,
 		)
 	})

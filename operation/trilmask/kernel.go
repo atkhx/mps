@@ -1,4 +1,4 @@
-package softmaxtril
+package trilmask
 
 /*
 #cgo CFLAGS: -x objective-c
@@ -6,42 +6,42 @@ package softmaxtril
 
 #include "kernel.h"
 
-void* softmaxtrilKernelCreate(void *device, const char *kernelSource) {
-    return [[SoftmaxtrilKernelImpl alloc] initWithDevice:(id<MTLDevice>)device
+void* trilMaskKernelCreate(void *device, const char *kernelSource) {
+    return [[TrilMaskKernelImpl alloc] initWithDevice:(id<MTLDevice>)device
 		kernelSource:[NSString stringWithUTF8String:kernelSource]];
 }
 
-void softmaxtrilForward(
+void trilMaskForward(
     void *kernel,
     void *commandBuffer,
     void *inputData,
     void *outputData,
+	float mask,
 	uint colsCount,
 	uint rowsCount
 ) {
 
-    [(__bridge SoftmaxtrilKernelImpl*)kernel forward:(id<MTLCommandBuffer>)commandBuffer
+    [(__bridge TrilMaskKernelImpl*)kernel forward:(id<MTLCommandBuffer>)commandBuffer
         inputData:(id<MTLBuffer>)inputData
         outputData:(id<MTLBuffer>)outputData
+		mask:(float)mask
         colsCount:(uint)colsCount
         rowsCount:(uint)rowsCount
 	];
 }
 
-void softmaxtrilBackward(
+void trilMaskBackward(
     void *kernel,
     void *commandBuffer,
     void *inputGrad,
     void *outputGrad,
-    void *outputData,
 	uint colsCount,
 	uint rowsCount
-
 ) {
-    [(__bridge SoftmaxtrilKernelImpl*)kernel backward:(id<MTLCommandBuffer>)commandBuffer
+
+    [(__bridge TrilMaskKernelImpl*)kernel backward:(id<MTLCommandBuffer>)commandBuffer
         inputGrad:(id<MTLBuffer>)inputGrad
         outputGrad:(id<MTLBuffer>)outputGrad
-        outputData:(id<MTLBuffer>)outputData
         colsCount:(uint)colsCount
         rowsCount:(uint)rowsCount
 	];
@@ -51,6 +51,7 @@ void softmaxtrilBackward(
 import "C"
 import (
 	_ "embed"
+	"math"
 	"unsafe"
 )
 
@@ -62,7 +63,7 @@ func New(deviceID unsafe.Pointer) *Kernel {
 	defer C.free(unsafe.Pointer(cKernelString))
 	return &Kernel{
 		deviceID: deviceID,
-		kernelID: C.softmaxtrilKernelCreate(deviceID, cKernelString),
+		kernelID: C.trilMaskKernelCreate(deviceID, cKernelString),
 	}
 }
 
@@ -78,11 +79,12 @@ func (k *Kernel) Forward(
 	colsCount int,
 	rowsCount int,
 ) {
-	C.softmaxtrilForward(
+	C.trilMaskForward(
 		k.kernelID,
 		commandBufferID,
 		inputData,
 		outputData,
+		C.float(float32(math.Inf(-1))),
 		C.uint(colsCount),
 		C.uint(rowsCount),
 	)
@@ -92,16 +94,14 @@ func (k *Kernel) Backward(
 	commandBufferID unsafe.Pointer,
 	inputGrad unsafe.Pointer,
 	outputGrad unsafe.Pointer,
-	outputData unsafe.Pointer,
 	colsCount int,
 	rowsCount int,
 ) {
-	C.softmaxtrilBackward(
+	C.trilMaskBackward(
 		k.kernelID,
 		commandBufferID,
 		inputGrad,
 		outputGrad,
-		outputData,
 		C.uint(colsCount),
 		C.uint(rowsCount),
 	)

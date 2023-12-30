@@ -6,10 +6,7 @@
     id<MTLDevice> _device;
 
     id<MTLComputePipelineState> _rmsByRowsPSO;
-    id<MTLComputePipelineState> _divRowsDividerGradsPSO;
-    
-    id<MTLComputePipelineState> _divRowsPSO;
-    id<MTLComputePipelineState> _divRowsInputGradsPSO;
+    id<MTLComputePipelineState> _rmsByRowsGradsPSO;
 
     NSError *error;
 }
@@ -37,11 +34,8 @@
 
         self.library = [_device newLibraryWithSource:kernelSource options:nil error:&error];
 
-        _rmsByRowsPSO = [self createPipelineStateWithFunctionName:@"rmsByRows"];
-
-        _divRowsPSO             = [self createPipelineStateWithFunctionName:@"divRows"];
-        _divRowsDividerGradsPSO = [self createPipelineStateWithFunctionName:@"divRowsDividerGrads"];
-        _divRowsInputGradsPSO   = [self createPipelineStateWithFunctionName:@"divRowsInputGrads"];
+        _rmsByRowsPSO      = [self createPipelineStateWithFunctionName:@"rmsByRows"];
+        _rmsByRowsGradsPSO = [self createPipelineStateWithFunctionName:@"rmsByRowsGrads"];
     }
     return self;
 }
@@ -49,7 +43,6 @@
 - (void) forward:(id<MTLCommandBuffer>)commandBuffer
         inputData:(id<MTLBuffer>)inputData
         outputData:(id<MTLBuffer>)outputData
-        aggData:(id<MTLBuffer>)aggData
         chunkSize:(uint)chunkSize
 {
     uint rowsCount = inputData.length / (sizeof(float) * chunkSize);
@@ -57,52 +50,30 @@
     id<MTLComputeCommandEncoder> rmsByRows = [commandBuffer computeCommandEncoder];
     [rmsByRows setComputePipelineState:_rmsByRowsPSO];
     [rmsByRows setBuffer:inputData offset:0 atIndex:0];
-    [rmsByRows setBuffer:aggData offset:0 atIndex:1];
+    [rmsByRows setBuffer:outputData offset:0 atIndex:1];
     [rmsByRows setBytes:&chunkSize length:sizeof(uint) atIndex:2];
     [rmsByRows dispatchThreads:MTLSizeMake(1, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
     [rmsByRows endEncoding];
-
-    id<MTLComputeCommandEncoder> divRowsOnRMS = [commandBuffer computeCommandEncoder];
-    [divRowsOnRMS setComputePipelineState:_divRowsPSO];
-    [divRowsOnRMS setBuffer:inputData offset:0 atIndex:0];
-    [divRowsOnRMS setBuffer:outputData offset:0 atIndex:1];
-    [divRowsOnRMS setBuffer:aggData offset:0 atIndex:2];
-    [divRowsOnRMS setBytes:&chunkSize length:sizeof(uint) atIndex:3];
-    [divRowsOnRMS dispatchThreads:MTLSizeMake(chunkSize, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
-    [divRowsOnRMS endEncoding];
 }
 
 - (void) backward:(id<MTLCommandBuffer>)commandBuffer
         inputData:(id<MTLBuffer>)inputData
-        inputGrad:(id<MTLBuffer>)inputGrad
         outputData:(id<MTLBuffer>)outputData
-        outputGrad:(id<MTLBuffer>)outputGrad
-        aggData:(id<MTLBuffer>)aggData
-        aggGrad:(id<MTLBuffer>)aggGrad
+        inputGrads:(id<MTLBuffer>)inputGrads
+        outputGrads:(id<MTLBuffer>)outputGrads
         chunkSize:(uint)chunkSize
 {
     uint rowsCount = inputData.length / (sizeof(float) * chunkSize);
 
-    id<MTLComputeCommandEncoder> dividerGrads = [commandBuffer computeCommandEncoder];
-    [dividerGrads setComputePipelineState:_divRowsDividerGradsPSO];
-    [dividerGrads setBuffer:aggData offset:0 atIndex:0];
-    [dividerGrads setBuffer:aggGrad offset:0 atIndex:1];
-    [dividerGrads setBuffer:outputData offset:0 atIndex:2];
-    [dividerGrads setBuffer:outputGrad offset:0 atIndex:3];
-    [dividerGrads setBytes:&chunkSize length:sizeof(uint) atIndex:4];
-    [dividerGrads dispatchThreads:MTLSizeMake(rowsCount, 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
-    [dividerGrads endEncoding];
-
-    id<MTLComputeCommandEncoder> inputGrads = [commandBuffer computeCommandEncoder];
-    [inputGrads setComputePipelineState:_divRowsInputGradsPSO];
-    [inputGrads setBuffer:inputData offset:0 atIndex:0];
-    [inputGrads setBuffer:inputGrad offset:0 atIndex:1];
-    [inputGrads setBuffer:outputGrad offset:0 atIndex:2];
-    [inputGrads setBuffer:aggData offset:0 atIndex:3];
-    [inputGrads setBuffer:aggGrad offset:0 atIndex:4];
-    [inputGrads setBytes:&chunkSize length:sizeof(uint) atIndex:5];
-    [inputGrads dispatchThreads:MTLSizeMake(inputGrad.length/4, 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
-    [inputGrads endEncoding];
+    id<MTLComputeCommandEncoder> rmsByRowsGrads = [commandBuffer computeCommandEncoder];
+    [rmsByRowsGrads setComputePipelineState:_rmsByRowsGradsPSO];
+    [rmsByRowsGrads setBuffer:inputData offset:0 atIndex:0];
+    [rmsByRowsGrads setBuffer:outputData offset:0 atIndex:1];
+    [rmsByRowsGrads setBuffer:inputGrads offset:0 atIndex:2];
+    [rmsByRowsGrads setBuffer:outputGrads offset:0 atIndex:3];
+    [rmsByRowsGrads setBytes:&chunkSize length:sizeof(uint) atIndex:4];
+    [rmsByRowsGrads dispatchThreads:MTLSizeMake(chunkSize, rowsCount, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [rmsByRowsGrads endEncoding];
 }
 
 @end

@@ -49,7 +49,7 @@
     [silu setComputePipelineState:_siluPSO];
     [silu setBuffer:inputData offset:0 atIndex:0];
     [silu setBuffer:outputData offset:0 atIndex:1];
-    [silu dispatchThreads:MTLSizeMake(outputData.length / sizeof(float), 1, 1) threadsPerThreadgroup:MTLSizeMake(256, 1, 1)];
+    [silu dispatchThreads:MTLSizeMake(outputData.length / sizeof(float), 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
     [silu endEncoding];
 }
 
@@ -66,7 +66,7 @@
     [siluGrads setBuffer:inputGrad offset:0 atIndex:1];
     [siluGrads setBuffer:outputData offset:0 atIndex:2];
     [siluGrads setBuffer:outputGrad offset:0 atIndex:3];
-    [siluGrads dispatchThreads:MTLSizeMake(inputGrad.length / sizeof(float), 1, 1) threadsPerThreadgroup:MTLSizeMake(256, 1, 1)];
+    [siluGrads dispatchThreads:MTLSizeMake(inputGrad.length / sizeof(float), 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
     [siluGrads endEncoding];
 }
 

@@ -2,11 +2,11 @@
 #import <Foundation/Foundation.h>
 #include <stdio.h>
 
-@implementation SoftmaxtrilKernelImpl {
+@implementation TrilMaskKernelImpl {
     id<MTLDevice> _device;
 
-    id<MTLComputePipelineState> _softmaxTrilPSO;
-    id<MTLComputePipelineState> _softmaxTrilBwdPSO;
+    id<MTLComputePipelineState> _trilMaskPSO;
+    id<MTLComputePipelineState> _trilMaskBwdPSO;
 
     NSError *error;
 }
@@ -34,8 +34,8 @@
 
         self.library = [_device newLibraryWithSource:kernelSource options:nil error:&error];
 
-        _softmaxTrilPSO = [self createPipelineStateWithFunctionName:@"softmaxTril"];
-        _softmaxTrilBwdPSO = [self createPipelineStateWithFunctionName:@"softmaxBufferTrilBwd"];
+        _trilMaskPSO = [self createPipelineStateWithFunctionName:@"trilMask"];
+        _trilMaskBwdPSO = [self createPipelineStateWithFunctionName:@"trilMaskBwd"];
     }
     return self;
 }
@@ -43,38 +43,38 @@
 - (void) forward:(id<MTLCommandBuffer>)commandBuffer
         inputData:(id<MTLBuffer>)inputData
         outputData:(id<MTLBuffer>)outputData
+        mask:(float)mask
         colsCount:(uint)colsCount
         rowsCount:(uint)rowsCount
 {
     uint depth = inputData.length/(sizeof(float)*colsCount*rowsCount);
-    id<MTLComputeCommandEncoder> softmaxTril = [commandBuffer computeCommandEncoder];
-    [softmaxTril setComputePipelineState:_softmaxTrilPSO];
-    [softmaxTril setBuffer:inputData offset:0 atIndex:0];
-    [softmaxTril setBuffer:outputData offset:0 atIndex:1];
-    [softmaxTril setBytes:&colsCount length:sizeof(uint) atIndex:2];
-    [softmaxTril setBytes:&rowsCount length:sizeof(uint) atIndex:3];
-    [softmaxTril dispatchThreads:MTLSizeMake(1, rowsCount, depth) threadsPerThreadgroup:MTLSizeMake(1, 32, 32)];
-    [softmaxTril endEncoding];
+    id<MTLComputeCommandEncoder> trilMask = [commandBuffer computeCommandEncoder];
+    [trilMask setComputePipelineState:_trilMaskPSO];
+    [trilMask setBuffer:inputData offset:0 atIndex:0];
+    [trilMask setBuffer:outputData offset:0 atIndex:1];
+    [trilMask setBytes:&mask length:sizeof(float) atIndex:2];
+    [trilMask setBytes:&colsCount length:sizeof(uint) atIndex:3];
+    [trilMask setBytes:&rowsCount length:sizeof(uint) atIndex:4];
+    [trilMask dispatchThreads:MTLSizeMake(colsCount, rowsCount, depth) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [trilMask endEncoding];
 }
 
 - (void) backward:(id<MTLCommandBuffer>)commandBuffer
         inputGrad:(id<MTLBuffer>)inputGrad
         outputGrad:(id<MTLBuffer>)outputGrad
-        outputData:(id<MTLBuffer>)outputData
         colsCount:(uint)colsCount
         rowsCount:(uint)rowsCount
 {
     uint depth = inputGrad.length/(sizeof(float)*colsCount*rowsCount);
-    id<MTLComputeCommandEncoder> softmaxTrilGrads = [commandBuffer computeCommandEncoder];
+    id<MTLComputeCommandEncoder> trilMaskGrads = [commandBuffer computeCommandEncoder];
 
-    [softmaxTrilGrads setComputePipelineState:_softmaxTrilBwdPSO];
-    [softmaxTrilGrads setBuffer:inputGrad offset:0 atIndex:0];
-    [softmaxTrilGrads setBuffer:outputGrad offset:0 atIndex:1];
-    [softmaxTrilGrads setBuffer:outputData offset:0 atIndex:2];
-    [softmaxTrilGrads setBytes:&colsCount length:sizeof(uint) atIndex:3];
-    [softmaxTrilGrads setBytes:&rowsCount length:sizeof(uint) atIndex:4];
-    [softmaxTrilGrads dispatchThreads:MTLSizeMake(1, rowsCount, depth) threadsPerThreadgroup:MTLSizeMake(1, 32, 32)];
-    [softmaxTrilGrads endEncoding];
+    [trilMaskGrads setComputePipelineState:_trilMaskBwdPSO];
+    [trilMaskGrads setBuffer:inputGrad offset:0 atIndex:0];
+    [trilMaskGrads setBuffer:outputGrad offset:0 atIndex:1];
+    [trilMaskGrads setBytes:&colsCount length:sizeof(uint) atIndex:2];
+    [trilMaskGrads setBytes:&rowsCount length:sizeof(uint) atIndex:3];
+    [trilMaskGrads dispatchThreads:MTLSizeMake(colsCount, rowsCount, depth) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
+    [trilMaskGrads endEncoding];
 }
 
 @end

@@ -1,31 +1,33 @@
-#ifndef SoftmaxtrilKernel_h
-#define SoftmaxtrilKernel_h
+#ifndef RmsNormRowsKernel_h
+#define RmsNormRowsKernel_h
 
 #import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
 
-@protocol SoftmaxtrilKernel <NSObject>
+@protocol RmsNormRowsKernel <NSObject>
 
 - (instancetype) initWithDevice:(id<MTLDevice>)device kernelSource:(NSString*)kernelSource;
 
 - (void) forward:(id<MTLCommandBuffer>)commandBuffer
         inputData:(id<MTLBuffer>)inputData
         outputData:(id<MTLBuffer>)outputData
-        colsCount:(uint)colsCount
-        rowsCount:(uint)rowsCount;
+        rmsData:(id<MTLBuffer>)rmsData
+        chunkSize:(uint)chunkSize;
 
 - (void) backward:(id<MTLCommandBuffer>)commandBuffer
+        inputData:(id<MTLBuffer>)inputData
         inputGrad:(id<MTLBuffer>)inputGrad
-        outputGrad:(id<MTLBuffer>)outputGrad
         outputData:(id<MTLBuffer>)outputData
-        colsCount:(uint)colsCount
-        rowsCount:(uint)rowsCount;
+        outputGrad:(id<MTLBuffer>)outputGrad
+        rmsData:(id<MTLBuffer>)rmsData
+        rmsGrad:(id<MTLBuffer>)rmsGrad
+        chunkSize:(uint)chunkSize;
 
 @end
 
 
-@interface SoftmaxtrilKernelImpl : NSObject <SoftmaxtrilKernel>
+@interface RmsNormRowsKernelImpl : NSObject <RmsNormRowsKernel>
     @property (nonatomic, strong) id<MTLLibrary> library;
 @end
 
-#endif /* SoftmaxtrilKernel_h */
+#endif /* RmsNormRowsKernel_h */

@@ -11,16 +11,13 @@
 - (void) forward:(id<MTLCommandBuffer>)commandBuffer
         inputData:(id<MTLBuffer>)inputData
         outputData:(id<MTLBuffer>)outputData
-        aggData:(id<MTLBuffer>)aggData
         chunkSize:(uint)chunkSize;
 
 - (void) backward:(id<MTLCommandBuffer>)commandBuffer
         inputData:(id<MTLBuffer>)inputData
-        inputGrad:(id<MTLBuffer>)inputGrad
         outputData:(id<MTLBuffer>)outputData
-        outputGrad:(id<MTLBuffer>)outputGrad
-        aggData:(id<MTLBuffer>)aggData
-        aggGrad:(id<MTLBuffer>)aggGrad
+        inputGrads:(id<MTLBuffer>)inputGrads
+        outputGrads:(id<MTLBuffer>)outputGrads
         chunkSize:(uint)chunkSize;
 
 @end

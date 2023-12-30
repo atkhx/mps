@@ -6,9 +6,10 @@ kernel void softmaxTril(
     device float *inputData [[ buffer(0) ]],
     device float *outputData [[ buffer(1) ]],
     constant uint& colsCount [[ buffer(2) ]],
-    const uint2 gid [[ thread_position_in_grid ]] )
+    constant uint& rowsCount [[ buffer(3) ]],
+    const uint3 gid [[ thread_position_in_grid ]] )
 {
-    uint startIdx = gid.y * colsCount;
+    uint startIdx = gid.z*colsCount*rowsCount + gid.y*colsCount;
     uint endIdx = startIdx + gid.y + 1;
 
     float max = inputData[startIdx];
@@ -34,9 +35,10 @@ kernel void softmaxBufferTrilBwd(
     device float *outputGrad [[ buffer(1) ]],
     device float *outputData [[ buffer(2) ]],
     constant uint& colsCount [[ buffer(3) ]],
-    const uint2 gid [[ thread_position_in_grid ]] )
+    constant uint& rowsCount [[ buffer(4) ]],
+    const uint3 gid [[ thread_position_in_grid ]] )
 {
-    uint startIdx = gid.y * colsCount;
+    uint startIdx = gid.z*colsCount*rowsCount + gid.y*colsCount;
     uint endIdx = startIdx +  gid.y+1;
 
     float g = 0;

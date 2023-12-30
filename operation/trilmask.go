@@ -4,12 +4,12 @@ import (
 	"unsafe"
 
 	"github.com/atkhx/mps"
-	"github.com/atkhx/mps/operation/softmaxtril"
+	"github.com/atkhx/mps/operation/trilmask"
 )
 
-func NewOpTriangularLowedSoftmax(device *mps.MTLDevice, inputData, inputGrad, outputData, outputGrad *mps.MTLBuffer, colsCount, rowsCount int) *OpTriangularLowedSoftmax {
-	return &OpTriangularLowedSoftmax{
-		kernel: softmaxtril.New(device.DeviceID),
+func NewOpTrilMask(device *mps.MTLDevice, inputData, inputGrad, outputData, outputGrad *mps.MTLBuffer, colsCount, rowsCount int) *OpTrilMask {
+	return &OpTrilMask{
+		kernel: trilmask.New(device.DeviceID),
 
 		inputData:  inputData.BufferID,
 		inputGrad:  inputGrad.BufferID,
@@ -22,8 +22,8 @@ func NewOpTriangularLowedSoftmax(device *mps.MTLDevice, inputData, inputGrad, ou
 	}
 }
 
-type OpTriangularLowedSoftmax struct {
-	kernel *softmaxtril.Kernel
+type OpTrilMask struct {
+	kernel *trilmask.Kernel
 
 	inputData unsafe.Pointer
 	inputGrad unsafe.Pointer
@@ -36,7 +36,7 @@ type OpTriangularLowedSoftmax struct {
 	rowsCount int
 }
 
-func (op *OpTriangularLowedSoftmax) Forward(b *mps.MTLCommandBuffer) {
+func (op *OpTrilMask) Forward(b *mps.MTLCommandBuffer) {
 	b.Exclusive(func() {
 		op.kernel.Forward(
 			b.ID,
@@ -48,13 +48,12 @@ func (op *OpTriangularLowedSoftmax) Forward(b *mps.MTLCommandBuffer) {
 	})
 }
 
-func (op *OpTriangularLowedSoftmax) Backward(b *mps.MTLCommandBuffer) {
+func (op *OpTrilMask) Backward(b *mps.MTLCommandBuffer) {
 	b.Exclusive(func() {
 		op.kernel.Backward(
 			b.ID,
 			op.inputGrad,
 			op.outputGrad,
-			op.outputData,
 			op.colsCount,
 			op.rowsCount,
 		)
