@@ -28,17 +28,17 @@ type Releasable interface {
 func NewMTLDevice() *MTLDevice {
 	deviceID := framework.MTLDeviceCreate()
 	device := &MTLDevice{
-		DeviceID:      deviceID,
-		CustomKernels: custom_kernel.CustomKernelCreate(deviceID),
+		DeviceID:     deviceID,
+		CustomKernel: custom_kernel.New(deviceID),
 	}
 
 	return device
 }
 
 type MTLDevice struct {
-	DeviceID      unsafe.Pointer
-	resources     []Releasable
-	CustomKernels unsafe.Pointer
+	DeviceID     unsafe.Pointer
+	resources    []Releasable
+	CustomKernel *custom_kernel.Kernel
 }
 
 func (device *MTLDevice) CreateCommandQueue() *MTLCommandQueue {

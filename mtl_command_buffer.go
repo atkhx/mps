@@ -6,7 +6,6 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/atkhx/mps/custom-kernel"
 	"github.com/atkhx/mps/framework"
 )
 
@@ -65,13 +64,13 @@ func (b *MTLCommandBuffer) Exclusive(operation func()) {
 
 func (b *MTLCommandBuffer) ClearMTLBuffer(buffer *MTLBuffer) {
 	b.Exclusive(func() {
-		custom_kernel.CustomKernelFill(b.device.CustomKernels, b.ID, buffer.BufferID, 0.0, 0, buffer.Length)
+		b.device.CustomKernel.Fill(b.ID, buffer.BufferID, 0.0, 0, buffer.Length)
 	})
 }
 
 func (b *MTLCommandBuffer) FillMTLBuffer(buffer *MTLBuffer, value float32) {
 	b.Exclusive(func() {
-		custom_kernel.CustomKernelFill(b.device.CustomKernels, b.ID, buffer.BufferID, value, 0, buffer.Length)
+		b.device.CustomKernel.Fill(b.ID, buffer.BufferID, value, 0, buffer.Length)
 	})
 }
 
@@ -87,8 +86,8 @@ func (b *MTLCommandBuffer) UpdateWithAdam(
 	beta2powIteration float32,
 ) {
 	b.Exclusive(func() {
-		custom_kernel.CustomKernelUpdateWithAdam(
-			b.device.CustomKernels, b.ID,
+		b.device.CustomKernel.UpdateWithAdam(
+			b.ID,
 			dataBuffer.BufferID,
 			gradBuffer.BufferID,
 			mBuffer.BufferID,

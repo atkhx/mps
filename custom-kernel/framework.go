@@ -3,7 +3,55 @@ package custom_kernel
 /*
 #cgo CFLAGS: -x objective-c
 #cgo LDFLAGS: -framework Metal -framework MetalPerformanceShaders -framework CoreGraphics -framework Foundation
-#include "framework.h"
+
+#include "kernel.h"
+
+void* customKernelCreate(void *deviceID, const char *kernelSource) {
+    return [[MPSCustomKernelImpl alloc]
+        initWithDevice:(id<MTLDevice>)deviceID
+        kernelSource:[NSString stringWithUTF8String:kernelSource]];
+}
+
+void customKernelFill(
+    void *kernelID,
+    void *commandBuffer,
+    void *dstBuffer,
+    float value,
+    const uint offset,
+    const uint length
+) {
+    [(__bridge MPSCustomKernelImpl*)kernelID fill:(id<MTLCommandBuffer>)commandBuffer
+        dstBuffer:(id<MTLBuffer>)dstBuffer
+        value:(float)value
+        offset:(uint)offset
+        length:(uint)length
+	];
+}
+
+void customKernelUpdateWithAdam(
+    void *kernelID,
+    void *commandBufferID,
+    void *dataBufferID,
+    void *gradBufferID,
+    void *mBufferID,
+    void *vBufferID,
+    float beta1,
+    float beta2,
+    float beta1powIterationLR,
+    float beta2powIteration
+) {
+    [(__bridge MPSCustomKernelImpl*)kernelID updateWithAdam:(id<MTLCommandBuffer>)commandBufferID
+        dataBuffer:(id<MTLBuffer>)dataBufferID
+        gradBuffer:(id<MTLBuffer>)gradBufferID
+        mBuffer:(id<MTLBuffer>)mBufferID
+        vBuffer:(id<MTLBuffer>)vBufferID
+        beta1:beta1
+        beta2:beta2
+        beta1powIterationLR:beta1powIterationLR
+        beta2powIteration:beta2powIteration];
+}
+
+
 */
 import "C"
 import (
@@ -12,86 +60,45 @@ import (
 )
 
 //go:embed kernel.metal
-var customKernelFunctions string
+var metalFunctions string
 
-func CustomKernelCreate(deviceID unsafe.Pointer) unsafe.Pointer {
-	cKernelString := C.CString(customKernelFunctions)
+func New(deviceID unsafe.Pointer) *Kernel {
+	cKernelString := C.CString(metalFunctions)
 	defer C.free(unsafe.Pointer(cKernelString))
-	return C.customKernelCreate(deviceID, cKernelString)
+	return &Kernel{
+		deviceID: deviceID,
+		kernelID: C.customKernelCreate(deviceID, cKernelString),
+	}
 }
 
-func CustomKernelCopy(kernelID, commandBufferID, dstBufferID, srcBufferID unsafe.Pointer, dstOffset, srcOffset, length int) {
-	C.customKernelCopy(kernelID, commandBufferID, dstBufferID, srcBufferID, C.uint(dstOffset*4), C.uint(srcOffset*4), C.uint(length*4))
+type Kernel struct {
+	deviceID unsafe.Pointer
+	kernelID unsafe.Pointer
 }
 
-func CustomKernelCopyWHD(kernelID, commandBufferID, dstBufferID, srcBufferID unsafe.Pointer, W, H, D int) {
-	C.customKernelCopyWHD(kernelID, commandBufferID, dstBufferID, srcBufferID, C.uint(W), C.uint(H), C.uint(D))
-}
-
-func CustomKernelFill(kernelID, commandBufferID, bufferID unsafe.Pointer, value float32, offset, length int) {
-	C.customKernelFill(kernelID, commandBufferID, bufferID, C.float(value), C.uint(offset*4), C.uint(length*4))
-}
-
-func CustomKernelAdd(kernelID, commandBufferID, dstBufferID, srcBufferID unsafe.Pointer, dstOffset, srcOffset, length int) {
-	C.customKernelAdd(kernelID, commandBufferID, dstBufferID, srcBufferID, C.uint(dstOffset*4), C.uint(srcOffset*4), C.uint(length*4))
-}
-
-func CustomKernelAddTo(kernelID, commandBufferID, dstBufferID, aBuffer, bBuffer unsafe.Pointer) {
-	C.customKernelAddTo(kernelID, commandBufferID, dstBufferID, aBuffer, bBuffer)
-}
-
-func CustomKernelAddToWHD(kernelID, commandBufferID, dstBufferID, aBuffer, bBuffer unsafe.Pointer, K float32, W, H, D int) {
-	C.customKernelAddToWHD(kernelID, commandBufferID, dstBufferID, aBuffer, bBuffer, C.float(K), C.uint(W), C.uint(H), C.uint(D))
-}
-
-func CustomKernelAddToWHDBwd(kernelID, commandBufferID, aGrad, bGrad, oGrad unsafe.Pointer, W, H, D int) {
-	C.customKernelAddToWHDBwd(kernelID, commandBufferID, aGrad, bGrad, oGrad, C.uint(W), C.uint(H), C.uint(D))
-}
-
-func CustomKernelAddScalar(kernelID, commandBufferID, dstBufferID unsafe.Pointer, value float32) {
-	C.customKernelAddScalar(kernelID, commandBufferID, dstBufferID, C.float(value))
-}
-
-func CustomKernelMul(kernelID, commandBufferID, dstBufferID, srcBufferID unsafe.Pointer, dstOffset, srcOffset, length int) {
-	C.customKernelMul(kernelID, commandBufferID, dstBufferID, srcBufferID, C.uint(dstOffset*4), C.uint(srcOffset*4), C.uint(length*4))
-}
-
-func CustomKernelSoftmaxForward(
-	kernelID,
-	commandBufferID,
-	dstBufferID,
-	srcBufferID,
-	sumOutBufferID unsafe.Pointer,
-	colsCount, rowsCount, offset int,
+func (k *Kernel) Fill(
+	commandBufferID unsafe.Pointer,
+	bufferID unsafe.Pointer,
+	value float32,
+	offset int,
+	length int,
 ) {
-	C.customKernelSoftmax(
-		kernelID,
-		commandBufferID,
-		dstBufferID,
-		srcBufferID,
-		sumOutBufferID,
-		C.uint(colsCount),
-		C.uint(rowsCount),
-		C.uint(offset*4),
-	)
+	C.customKernelFill(k.kernelID, commandBufferID, bufferID, C.float(value), C.uint(offset*4), C.uint(length*4))
 }
 
-func CustomKernelUpdateWithAdam(
-	kernelID,
-	commandBufferID,
-
-	dataBufferID,
-	gradBufferID,
-	mBufferID,
+func (k *Kernel) UpdateWithAdam(
+	commandBufferID unsafe.Pointer,
+	dataBufferID unsafe.Pointer,
+	gradBufferID unsafe.Pointer,
+	mBufferID unsafe.Pointer,
 	vBufferID unsafe.Pointer,
-
-	beta1,
-	beta2,
-	beta1powIterationLR,
+	beta1 float32,
+	beta2 float32,
+	beta1powIterationLR float32,
 	beta2powIteration float32,
 ) {
 	C.customKernelUpdateWithAdam(
-		kernelID,
+		k.kernelID,
 		commandBufferID,
 
 		dataBufferID,
@@ -103,126 +110,5 @@ func CustomKernelUpdateWithAdam(
 		C.float(beta2),
 		C.float(beta1powIterationLR),
 		C.float(beta2powIteration),
-	)
-}
-
-func CustomKernelSoftmaxTrilFwdCreate(
-	kernelID,
-	commandBufferID,
-	dstBufferID,
-	srcBufferID unsafe.Pointer,
-
-	colsCount,
-	rowsCount,
-	offset int,
-) {
-	C.customKernelSoftmaxTrilFwd(
-		kernelID,
-		commandBufferID,
-		dstBufferID,
-		srcBufferID,
-		C.uint(colsCount),
-		C.uint(rowsCount),
-		C.uint(offset*4),
-	)
-}
-
-func CustomKernelSoftmaxTrilBackward(
-	kernelID,
-	commandBufferID,
-	dstBufferID,
-	srcBufferID,
-	softmaxBufferID unsafe.Pointer,
-	colsCount, rowsCount, offset int,
-) {
-	C.customKernelSoftmaxTrilBwd(
-		kernelID,
-		commandBufferID,
-		dstBufferID,
-		srcBufferID,
-		softmaxBufferID,
-		C.uint(colsCount),
-		C.uint(rowsCount),
-		C.uint(offset*4),
-	)
-}
-
-func CustomKernelNLLByPos(
-	kernelID,
-	commandBufferID,
-	dstBufferID,
-	smxBufferID,
-	tgtBufferID unsafe.Pointer,
-	chunkSize int,
-) {
-	C.customKernelNLLByPos(
-		kernelID,
-		commandBufferID,
-		dstBufferID,
-		smxBufferID,
-		tgtBufferID,
-		C.uint(chunkSize),
-	)
-}
-
-func CustomKernelNLLByPosBwd(
-	kernelID,
-	commandBufferID,
-	oGrad,
-	aGrad,
-	tgtBufferID,
-	smxBufferID unsafe.Pointer,
-	chunkSize int,
-) {
-	C.customKernelNLLByPosBwd(
-		kernelID,
-		commandBufferID,
-		oGrad,
-		aGrad,
-		tgtBufferID,
-		smxBufferID,
-		C.uint(chunkSize),
-	)
-}
-
-func CustomKernelCrossEntropyPos(
-	kernelID,
-	commandBufferID,
-	dstBufferID,
-	srcBufferID,
-	smxBufferID,
-	sumBufferID,
-	tgtBufferID unsafe.Pointer,
-	chunkSize int,
-) {
-	C.customKernelCrossEntropyPos(
-		kernelID,
-		commandBufferID,
-		dstBufferID,
-		srcBufferID,
-		smxBufferID,
-		sumBufferID,
-		tgtBufferID,
-		C.uint(chunkSize),
-	)
-}
-
-func CustomKernelCrossEntropyPosBwd(
-	kernelID,
-	commandBufferID,
-	oGrad,
-	aGrad,
-	tgtBufferID,
-	smxBufferID unsafe.Pointer,
-	chunkSize int,
-) {
-	C.customKernelCrossEntropyPosBwd(
-		kernelID,
-		commandBufferID,
-		oGrad,
-		aGrad,
-		tgtBufferID,
-		smxBufferID,
-		C.uint(chunkSize),
 	)
 }
