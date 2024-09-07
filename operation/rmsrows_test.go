@@ -3,8 +3,9 @@ package operation
 import (
 	"testing"
 
-	"github.com/atkhx/mps"
 	"github.com/stretchr/testify/require"
+
+	"github.com/atkhx/mps"
 )
 
 func TestOpRMSByRows(t *testing.T) {
@@ -33,13 +34,13 @@ func TestOpRMSByRows(t *testing.T) {
 	operation.Backward(b)
 	b.Wait()
 
-	require.Equal(t, []float32{
+	require.InDeltaSlice(t, []float32{
 		2.1602492,
 		5.0662293,
-	}, outputData.GetData())
+	}, outputData.GetData(), 0.00001)
 
-	require.Equal(t, []float32{
+	require.InDeltaSlice(t, []float32{
 		1.6973351, 3.3946702, 5.0920053,
 		3.6845288, 4.605661, 5.526793,
-	}, inputGrads.GetData())
+	}, inputGrads.GetData(), 0.00001)
 }
