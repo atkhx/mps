@@ -52,6 +52,7 @@ var metalFunctions string
 func New(deviceID unsafe.Pointer) *Kernel {
 	cKernelString := C.CString(metalFunctions)
 	defer C.free(unsafe.Pointer(cKernelString))
+	
 	return &Kernel{
 		deviceID: deviceID,
 		kernelID: C.addEqualKernelCreate(deviceID, cKernelString),

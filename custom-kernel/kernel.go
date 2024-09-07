@@ -12,6 +12,10 @@ void* customKernelCreate(void *deviceID, const char *kernelSource) {
         kernelSource:[NSString stringWithUTF8String:kernelSource]];
 }
 
+void customKernelRelease(void *kernelID) {
+    [(__bridge MPSCustomKernelImpl*)kernelID release];
+}
+
 void customKernelFill(
     void *kernelID,
     void *commandBuffer,
@@ -74,6 +78,10 @@ func New(deviceID unsafe.Pointer) *Kernel {
 type Kernel struct {
 	deviceID unsafe.Pointer
 	kernelID unsafe.Pointer
+}
+
+func (k *Kernel) Release() {
+	C.customKernelRelease(k.kernelID)
 }
 
 func (k *Kernel) Fill(

@@ -37,6 +37,10 @@ type MTLCommandBuffer struct {
 	mu sync.Mutex
 }
 
+func (b *MTLCommandBuffer) Released() bool {
+	return b.released
+}
+
 func (b *MTLCommandBuffer) Release() {
 	if !b.released {
 		framework.MTLCommandBufferRelease(b.ID)

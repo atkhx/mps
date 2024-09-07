@@ -31,7 +31,7 @@ func NewMTLDevice() *MTLDevice {
 		DeviceID:     deviceID,
 		CustomKernel: custom_kernel.New(deviceID),
 	}
-
+	device.regSource(device.CustomKernel)
 	return device
 }
 
